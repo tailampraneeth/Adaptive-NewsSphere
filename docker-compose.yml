@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  # Relational Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: ans-postgres
+    environment:
+      POSTGRES_USER: developer
+      POSTGRES_PASSWORD: LocalPassword123
+      POSTGRES_DB: newssphere
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - newssphere-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U developer -d newssphere"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache & Task Broker
+  redis:
+    image: redis:7-alpine
+    container_name: ans-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    networks:
+      - newssphere-net
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Vector Database
+  qdrant:
+    image: qdrant/qdrant:v1.9.1
+    container_name: ans-qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrantdata:/qdrant/storage
+    networks:
+      - newssphere-net
+    # No internal healthcheck because qdrant image is distroless (no curl/wget/nc).
+    # Health check is managed externally by verifying container state and host HTTP ports.
+
+networks:
+  newssphere-net:
+    name: newssphere-network
+    driver: bridge
+
+volumes:
+  pgdata:
+  redisdata:
+  qdrantdata:
