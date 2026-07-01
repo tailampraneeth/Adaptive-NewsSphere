@@ -1,11 +1,5 @@
 import pytest
-from datetime import datetime, timezone
-import uuid
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
-from sqlalchemy.future import select
-import pytest_asyncio
-from app.core.config import settings
-from app.database.models import Base, Article, Publisher
+from sqlalchemy.ext.asyncio import AsyncSession
 from app.services.ingestion import IngestionService
 from app.utils.text_cleaner import clean_html, generate_article_hashes
 
@@ -22,10 +16,10 @@ def test_hash_generation():
     """Confirm content and article hashes behave deterministically."""
     title = "Test Article Title"
     body = "Test body content."
-    
+
     hash1_c, hash1_a = generate_article_hashes(title, body)
     hash2_c, hash2_a = generate_article_hashes(title, body)
-    
+
     assert hash1_c == hash2_c
     assert hash1_a == hash2_a
     assert len(hash1_c) == 64  # SHA-256 length in hex representation
@@ -34,7 +28,7 @@ def test_hash_generation():
 async def test_duplicate_article_prevention(db_session: AsyncSession, monkeypatch):
     """Test that ingestion engine checks constraints and avoids duplicate DB records."""
     service = IngestionService(db_session)
-    
+
     # 1. Register publisher
     await service.ensure_publisher("bbc", "BBC News", "https://www.bbc.com")
 

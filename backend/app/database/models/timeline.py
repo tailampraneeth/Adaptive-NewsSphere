@@ -8,25 +8,25 @@ class StoryTimeline(Base):
     __tablename__ = "story_timelines"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        primary_key=True, 
+        primary_key=True,
         default=uuid.uuid4
     )
     story_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("stories.id", ondelete="CASCADE"), 
+        ForeignKey("stories.id", ondelete="CASCADE"),
         nullable=False,
         index=True
     )
     event_timestamp: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), 
+        DateTime(timezone=True),
         nullable=False,
         index=True
     )
     headline: Mapped[str] = mapped_column(
-        String(255), 
+        String(255),
         nullable=False
     )
     description: Mapped[str] = mapped_column(
-        Text, 
+        Text,
         nullable=False
     )
 

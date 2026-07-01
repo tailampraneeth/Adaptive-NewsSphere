@@ -48,3 +48,15 @@ qdrant_storage/
 
 # Redis
 dump.rdb
+
+# SQLite
+*.sqlite
+*.sqlite3
+
+# Python cache
+*.pyc
+
+# Local datasets / generated reports
+reports/
+backend/reports/
+backend/data/

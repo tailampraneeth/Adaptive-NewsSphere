@@ -1,14 +1,10 @@
-import asyncio
 import pytest
 from datetime import datetime, timezone
 import uuid
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-import pytest_asyncio
-from app.core.config import settings
 from app.database.models import (
-    Base, User, Publisher, Story, Article, StoryTimeline, 
-    UserInteraction, ChatSession, ChatMessage, UserRecommendationLog
+    Publisher, Story, Article
 )
 
 # Test fixtures are imported automatically from conftest.py
@@ -35,7 +31,7 @@ async def test_crud_publisher_and_article(db_session: AsyncSession):
 
     # 2. Create a story
     story = Story(
-        centroid_vector_id=uuid.uuid4(),
+        centroid_vector_id=str(uuid.uuid4()),
         summary_quick="Quick story highlight.",
         summary_beginner="Simple explanation of story.",
         summary_professional="Professional breakdown.",
@@ -60,12 +56,12 @@ async def test_crud_publisher_and_article(db_session: AsyncSession):
     await db_session.commit()
 
     # Query article and verify relationships
-    result = await db_session.execute(select(Article).filter_by(title="Breaking Tech News"))
-    queried_article = result.scalar_one_or_none()
+    article_result = await db_session.execute(select(Article).filter_by(title="Breaking Tech News"))
+    queried_article = article_result.scalar_one_or_none()
     assert queried_article is not None
     assert queried_article.publisher_id == "bbc"
     assert queried_article.story_id == story.id
-    
+
     # Test cascade loading
     assert queried_article.publisher.name == "BBC News"
     assert queried_article.story.summary_quick == "Quick story highlight."

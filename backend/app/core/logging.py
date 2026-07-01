@@ -7,14 +7,14 @@ def setup_logging():
     """Configures application-wide logging with Console and Rotating File outputs."""
     log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     formatter = logging.Formatter(log_format)
-    
+
     # Root logger config
     root_logger = logging.getLogger()
-    
+
     # Clear existing handlers to prevent duplicate prints
     if root_logger.hasHandlers():
         root_logger.handlers.clear()
-        
+
     root_logger.setLevel(settings.LOG_LEVEL)
 
     # Console output handler
