@@ -19,14 +19,14 @@ async def run_semantic_clustering():
     print("=" * 60)
     print("      ADAPTIVE NEWSSPHERE: SEMANTIC STORY CLUSTERING")
     print("=" * 60)
-    
+
     # 1. Initialize services
     embedder = EmbedderService()
     vector_store = VectorStoreService()
-    
+
     engine = create_async_engine(db_url, echo=False)
     async_session = async_sessionmaker(bind=engine, expire_on_commit=False)
-    
+
     async with async_session() as session:
         # 2. Get all articles with body_text that do not have a story_id
         result = await session.execute(
@@ -34,23 +34,23 @@ async def run_semantic_clustering():
         )
         articles = result.scalars().all()
         total_count = len(articles)
-        
+
         print(f"\n[*] Found {total_count} articles requiring semantic story grouping.")
         if total_count == 0:
             print("[*] No articles to cluster. Exiting.")
             await engine.dispose()
             return
-            
+
         clustering_service = ClusteringService(session, embedder, vector_store)
-        
+
         # Process all articles in a single run
         batch_limit = 1000
         articles_to_process = articles[:batch_limit]
         print(f"[*] Grouping batch of {len(articles_to_process)} articles...")
-        
+
         t0 = time.time()
         processed = 0
-        
+
         for article in articles_to_process:
             try:
                 await clustering_service.cluster_article(article)
@@ -59,11 +59,11 @@ async def run_semantic_clustering():
                     print(f"  [+] Clustered {processed}/{len(articles_to_process)} articles...")
             except Exception as e:
                 print(f"  [!] Ingestion error on article {article.id}: {e}")
-                
+
         # Let's count total stories in the database
         story_count_res = await session.execute(select(Story))
         stories_total = len(story_count_res.scalars().all())
-        
+
         duration = time.time() - t0
         print("\n" + "=" * 60)
         print("                  CLUSTERING RESULTS")
@@ -72,7 +72,7 @@ async def run_semantic_clustering():
         print(f"  Total Stories      : {stories_total}")
         print(f"  Time Elapsed       : {duration:.2f} seconds")
         print("=" * 60)
-        
+
     await engine.dispose()
 
 if __name__ == "__main__":

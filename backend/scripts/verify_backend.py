@@ -62,14 +62,14 @@ async def main():
     print("=" * 60)
     print("ADAPTIVE NEWSSPHERE: BACKEND INTEGRATED CONNECTIVITY CHECK")
     print("=" * 60)
-    
+
     pg_ok = await check_postgres()
     print("-" * 60)
     redis_ok = await check_redis()
     print("-" * 60)
     qd_ok = await check_qdrant()
     print("=" * 60)
-    
+
     if pg_ok and redis_ok and qd_ok:
         print("[STATUS: SUCCESS] Backend successfully connected to all three services!")
         sys.exit(0)

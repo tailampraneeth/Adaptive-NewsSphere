@@ -1,8 +1,19 @@
 from datetime import datetime
+from enum import Enum
 from typing import Optional
 from sqlalchemy import String, Numeric, Integer, Float, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database.models.base import Base
+
+class PublisherSourceType(str, Enum):
+    NEWSWIRE = "NEWSWIRE"
+    PRIMARY_SOURCE = "PRIMARY_SOURCE"
+    LOCAL_NEWS = "LOCAL_NEWS"
+    INTERNATIONAL = "INTERNATIONAL"
+    GOVERNMENT = "GOVERNMENT"
+    RESEARCH = "RESEARCH"
+    TECH_MEDIA = "TECH_MEDIA"
+    FINANCIAL = "FINANCIAL"
 
 class Publisher(Base):
     __tablename__ = "publishers"
@@ -26,6 +37,11 @@ class Publisher(Base):
     bias_rating: Mapped[str] = mapped_column(
         String(20),
         default="center"
+    )
+    source_type: Mapped[str] = mapped_column(
+        String(50),
+        default=PublisherSourceType.LOCAL_NEWS.value,
+        server_default=PublisherSourceType.LOCAL_NEWS.value
     )
 
     # Feed quality & health monitoring fields (Phase 4) - Nullable to handle existing records

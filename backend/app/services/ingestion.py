@@ -33,7 +33,7 @@ def calculate_article_quality(
 ) -> float:
     """
     Computes a baseline quality score ∈ [0.0, 1.0] for the article.
-    
+
     Weights:
       - Body length (word count): up to 0.30
       - Author field present: 0.15

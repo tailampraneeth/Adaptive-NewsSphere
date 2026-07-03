@@ -15,10 +15,20 @@ New in M2 Final Review:
 """
 import uuid
 from datetime import datetime
+from enum import Enum
 from typing import Optional
 from sqlalchemy import Text, Numeric, DateTime, func, String, Integer, Float, JSON, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database.models.base import Base
+
+
+class StoryRelationType(str, Enum):
+    RELATED = "RELATED"
+    FOLLOW_UP = "FOLLOW_UP"
+    CAUSES = "CAUSES"
+    MERGED_FROM = "MERGED_FROM"
+    SPLIT_FROM = "SPLIT_FROM"
+    CONTRADICTS = "CONTRADICTS"
 
 
 class StoryRelation(Base):
@@ -36,7 +46,11 @@ class StoryRelation(Base):
     )
     relation_type: Mapped[str] = mapped_column(
         String(50),
-        default="related"
+        default=StoryRelationType.RELATED.value
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now()
     )
 
 
@@ -136,6 +150,26 @@ class Story(Base):
     rag_context: Mapped[Optional[dict]] = mapped_column(
         JSON,
         nullable=True
+    )
+
+    # List of structured evidence mappings for multi-source verification
+    evidence: Mapped[Optional[list[dict]]] = mapped_column(
+        JSON,
+        nullable=True
+    )
+
+    # Structured metadata explaining the fact-check verification score
+    # Schema: { agreement_score, publisher_diversity, trusted_publishers,
+    #           supporting_articles, conflicting_articles, semantic_confidence }
+    verification_metadata: Mapped[Optional[dict]] = mapped_column(
+        JSON,
+        nullable=True
+    )
+
+    # Flag denoting if numeric/factual conflict exists between source articles
+    has_conflicts: Mapped[bool] = mapped_column(
+        default=False,
+        server_default="false"
     )
 
     # Centroid-nearest representative article link

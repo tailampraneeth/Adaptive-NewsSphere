@@ -17,74 +17,102 @@ from app.database.models.duplicate import ArticleDuplicate
 async def run_analytics():
     db_url = settings.get_database_url()
     print("[*] Connecting to database for expanded 10-section analytics compilation...")
-    
+
     engine = create_async_engine(db_url, echo=False)
     async_session = async_sessionmaker(bind=engine, expire_on_commit=False)
-    
+
     async with async_session() as session:
         # 1. Total Articles & Publishers
         total_articles = (await session.execute(select(func.count(Article.id)))).scalar() or 0
         total_publishers = (await session.execute(select(func.count(Publisher.id)))).scalar() or 0
-        
+
         # Languages
         lang_query = await session.execute(select(Article.language, func.count(Article.id)).group_by(Article.language))
         languages = lang_query.all()
-        
+
         # 2. Text Statistics & Lengths
         avg_words = (await session.execute(select(func.avg(Article.word_count)).where(Article.word_count.is_not(None)))).scalar() or 0.0
         avg_chars = (await session.execute(select(func.avg(Article.character_count)).where(Article.character_count.is_not(None)))).scalar() or 0.0
         avg_read_time = (await session.execute(select(func.avg(Article.reading_time)).where(Article.reading_time.is_not(None)))).scalar() or 0.0
         min_chars = (await session.execute(select(func.min(Article.character_count)).where(Article.character_count.is_not(None)))).scalar() or 0
         max_chars = (await session.execute(select(func.max(Article.character_count)).where(Article.character_count.is_not(None)))).scalar() or 0
-        
+
         # 3. Metadata Quality & Integrity
         missing_author = (await session.execute(select(func.count(Article.id)).where(Article.author.is_(None)))).scalar() or 0
         missing_category = (await session.execute(select(func.count(Article.id)).where(Article.category.is_(None)))).scalar() or 0
         missing_image = (await session.execute(select(func.count(Article.id)).where(Article.image_url.is_(None)))).scalar() or 0
-        
+
         # 4. Publisher Performance & Feed Health
         pub_query = await session.execute(select(Publisher))
         publishers = pub_query.scalars().all()
-        
+
         # 5. Story Importance & Trending Score Distributions
         total_stories = (await session.execute(select(func.count(Story.id)))).scalar() or 0
         avg_importance = (await session.execute(select(func.avg(Story.importance_score)))).scalar() or 0.0
         max_importance = (await session.execute(select(func.max(Story.importance_score)))).scalar() or 0.0
         min_importance = (await session.execute(select(func.min(Story.importance_score)))).scalar() or 0.0
-        
+
         avg_trending = (await session.execute(select(func.avg(Story.trending_score)))).scalar() or 0.0
         max_trending = (await session.execute(select(func.max(Story.trending_score)))).scalar() or 0.0
         min_trending = (await session.execute(select(func.min(Story.trending_score)))).scalar() or 0.0
-        
+
         # 6. Automatic Category Classification Stats
         cat_query = await session.execute(select(Article.category, func.count(Article.id)).group_by(Article.category))
         categories = cat_query.all()
-        
+
         high_conf = (await session.execute(select(func.count(Article.id)).where(Article.category_confidence >= 0.70))).scalar() or 0
         med_conf = (await session.execute(select(func.count(Article.id)).where(Article.category_confidence.between(0.45, 0.69)))).scalar() or 0
         low_conf = (await session.execute(select(func.count(Article.id)).where(Article.category_confidence < 0.45))).scalar() or 0
-        
+
         # 7. Semantic Clustering Results
         avg_articles_per_story = (await session.execute(select(func.avg(Story.article_count)))).scalar() or 0.0
         max_articles_per_story = (await session.execute(select(func.max(Story.article_count)))).scalar() or 0
         single_article_stories = (await session.execute(select(func.count(Story.id)).where(Story.article_count == 1))).scalar() or 0
         multi_article_stories = (await session.execute(select(func.count(Story.id)).where(Story.article_count > 1))).scalar() or 0
-        
+
         # 8. Duplicate Classification Statistics
         dup_counts = {}
         for d_type in ["EXACT_DUPLICATE", "SEMANTIC_DUPLICATE", "UPDATED_ARTICLE", "CORRECTED_ARTICLE"]:
             c = (await session.execute(select(func.count(ArticleDuplicate.id)).where(ArticleDuplicate.duplicate_type == d_type))).scalar() or 0
             dup_counts[d_type] = c
-            
+
         # 9. RAG Context Readiness
         rag_ready_stories = (await session.execute(select(func.count(Story.id)).where(Story.rag_context.is_not(None)))).scalar() or 0
-        
+
+        # 11. Story Intelligence & Verification Analytics
+        from app.database.models.timeline import StoryTimeline
+        from app.database.models.story import StoryRelation
+
+        avg_verification = (await session.execute(select(func.avg(Story.verification_score)).where(Story.verification_score.is_not(None)))).scalar() or 0.0
+        total_verified_stories = (await session.execute(select(func.count(Story.id)).where(Story.verification_score.is_not(None)))).scalar() or 0
+
+        high_verification = (await session.execute(select(func.count(Story.id)).where(Story.verification_score >= 0.80))).scalar() or 0
+        med_verification = (await session.execute(select(func.count(Story.id)).where(Story.verification_score.between(0.50, 0.79)))).scalar() or 0
+        low_verification = (await session.execute(select(func.count(Story.id)).where(Story.verification_score < 0.50))).scalar() or 0
+
+        conflict_count = (await session.execute(select(func.count(Story.id)).where(Story.has_conflicts.is_(True)))).scalar() or 0
+        conflict_rate = conflict_count / max(1, total_verified_stories)
+
+        avg_diversity = (await session.execute(select(func.avg(Story.publisher_diversity)))).scalar() or 0.0
+
+        total_timelines = (await session.execute(select(func.count(StoryTimeline.id)))).scalar() or 0
+        avg_timelines = total_timelines / max(1, total_stories)
+
+        # Relationship counts
+        rel_query = await session.execute(select(StoryRelation.relation_type, func.count(StoryRelation.parent_story_id)).group_by(StoryRelation.relation_type))
+        relationships = rel_query.all()
+
+        # Evidence / Claims count
+        stories_with_evidence = (await session.execute(select(Story.evidence).where(Story.evidence.is_not(None)))).scalars().all()
+        total_claims = sum(len(ev) for ev in stories_with_evidence if ev)
+        avg_claims = total_claims / max(1, len(stories_with_evidence)) if stories_with_evidence else 0.0
+
         # Generate Markdown content
         now_str = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
-        
+
         md_content = f"""# Adaptive NewsSphere: Expanded Dataset Quality & Analytics Report
 
-**Compiled At:** {now_str}  
+**Compiled At:** {now_str}
 **Database Host:** local-postgres-container (port 5433)
 
 ---
@@ -98,8 +126,8 @@ async def run_analytics():
 """
         for lang, count in languages:
             md_content += f"*   **`{lang or 'Unknown'}`**: {count} articles\n"
-            
-        md_content += """
+
+        md_content += f"""
 ---
 
 ## 2. Text Statistics & Lengths
@@ -190,22 +218,47 @@ async def run_analytics():
 
 ---
 
-## 10. Engineering Recommendations for Data & Model Quality
+## 10. Story Intelligence & Verification Analytics
+
+*   **Verified Stories Count:** {total_verified_stories} of {total_stories} ({total_verified_stories / max(1, total_stories) * 100:.1f}%)
+*   **Average Verification Score:** {avg_verification:.4f}
+*   **Story Verification Distribution:**
+    *   *High Verification (score >= 0.80):* {high_verification} ({high_verification / max(1, total_verified_stories) * 100:.1f}%)
+    *   *Medium Verification (0.50-0.79):* {med_verification} ({med_verification / max(1, total_verified_stories) * 100:.1f}%)
+    *   *Low Verification (< 0.50):* {low_verification} ({low_verification / max(1, total_verified_stories) * 100:.1f}%)
+*   **Average Publisher Diversity:** {avg_diversity:.2f}
+*   **Factual Conflict Rate:** {conflict_rate * 100:.1f}% ({conflict_count} conflicting stories)
+*   **Timeline Milestones Stats:**
+    *   *Total Milestones Generated:* {total_timelines}
+    *   *Average Milestones per Story:* {avg_timelines:.2f}
+*   **Verification Success Rate:** {avg_verification * 100:.1f}% (corroborated claims ratio)
+*   **Claims Evidence Statistics:**
+    *   *Total Registered Claims:* {total_claims}
+    *   *Average Claims per Verified Story:* {avg_claims:.1f}
+*   **Story Relationship Counts:**
+"""
+        for rel_type, count in relationships:
+            md_content += f"    *   *`{rel_type}`*: {count}\n"
+
+        md_content += """
+---
+
+## 11. Engineering Recommendations for Data & Model Quality
 
 1.  **Zero-Shot Category Expansion:** Leverage semantic models to dynamically classify niche articles rather than defaulting to "World".
 2.  **Publisher Rate Limiting & Backoff:** Implement exponential backoff for feeds (like CNBC) that intermittent parser errors.
 3.  **Human Author Extraction Parser:** Write regular expression extractors to parse out clean names from complex strings (e.g., "By John Doe and Jane Smith").
 4.  **Story Archiving Policy:** Implement a cron scheduler to flag inactive stories after 72 hours of no new articles to optimize vector search latency.
 """
-        
+
         # Write to artifacts directory
         artifacts_dir = r"C:\Users\taila\.gemini\antigravity\brain\4c2f35a4-160b-4413-9564-632d039099a5"
         report_path = os.path.join(artifacts_dir, "dataset_analytics_report.md")
-        
+
         with open(report_path, "w", encoding="utf-8") as f:
             f.write(md_content)
-            
-        print(f"[OK] 10-section Quality & Analytics report compiled successfully at: {report_path}")
+
+        print(f"[OK] 11-section Quality & Analytics report compiled successfully at: {report_path}")
 
     await engine.dispose()
 

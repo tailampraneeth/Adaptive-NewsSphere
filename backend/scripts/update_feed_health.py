@@ -34,41 +34,41 @@ async def track_feed_health():
     print("=" * 60)
     print("      ADAPTIVE NEWSSPHERE: FEED HEALTH MONITOR")
     print("=" * 60)
-    
+
     engine = create_async_engine(db_url, echo=False)
     async_session = async_sessionmaker(bind=engine, expire_on_commit=False)
-    
+
     async with async_session() as session:
         # Fetch registered publishers
         result = await session.execute(select(Publisher))
         publishers = result.scalars().all()
-        
+
         print(f"[*] Analyzing live feed performance for {len(publishers)} publishers...")
-        
+
         for pub in publishers:
             feed_url = CRAWL_FEEDS.get(pub.id)
             if not feed_url:
                 continue
-                
+
             print(f"\n[*] Testing {pub.name} ({pub.id})...")
-            
+
             # Start timer
             t0 = time.time()
             articles_count = 0
             duplicates_count = 0
-            
+
             try:
                 # 1. Parse feed and measure network latency
                 feed = feedparser.parse(feed_url)
                 latency_ms = (time.time() - t0) * 1000
-                
+
                 # Check for parsing errors
                 if hasattr(feed, "bozo") and feed.bozo and isinstance(feed.bozo_exception, Exception):
                     raise feed.bozo_exception
-                    
+
                 entries = feed.get("entries", [])
                 articles_count = len(entries)
-                
+
                 # 2. Check duplicate counts against database
                 if articles_count > 0:
                     for entry in entries:
@@ -77,31 +77,31 @@ async def track_feed_health():
                             res = await session.execute(select(Article).filter_by(source_url=url))
                             if res.scalar_one_or_none():
                                 duplicates_count += 1
-                                
+
                 duplicate_pct = (duplicates_count / articles_count * 100) if articles_count > 0 else 0.0
-                
+
                 # Update metrics
                 pub.successful_fetches = (pub.successful_fetches or 0) + 1
-                
+
                 # Compute moving average of latency
                 prev_avg = pub.avg_latency_ms or 0.0
                 prev_count = max(0, pub.successful_fetches - 1)
                 pub.avg_latency_ms = ((prev_avg * prev_count) + latency_ms) / pub.successful_fetches
-                
+
                 pub.articles_per_fetch = articles_count
                 pub.duplicate_percentage = duplicate_pct
                 pub.last_fetched_at = datetime.datetime.now(datetime.timezone.utc)
-                
+
                 print(f"    [OK] Latency: {latency_ms:.1f}ms | Articles: {articles_count} | Duplicates: {duplicate_pct:.1f}%")
             except Exception as e:
                 print(f"    [FAIL] Fetch failed: {e}")
                 pub.failed_fetches = (pub.failed_fetches or 0) + 1
-                
+
         await session.commit()
         print("\n" + "=" * 60)
         print("[STATUS] Publisher health metrics updated successfully.")
         print("=" * 60)
-        
+
     await engine.dispose()
 
 if __name__ == "__main__":

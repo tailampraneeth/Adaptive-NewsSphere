@@ -32,7 +32,7 @@ def verify_docker():
         # Check docker command exists
         ver = subprocess.run(["docker", "--version"], capture_output=True, text=True, check=True)
         print(f"[OK Docker CLI] Found: {ver.stdout.strip()}")
-        
+
         # Check docker daemon runs
         info = subprocess.run(["docker", "info"], capture_output=True, text=True)
         if info.returncode == 0:
@@ -52,12 +52,12 @@ async def main():
     print("=" * 60)
     print("ADAPTIVE NEWSSPHERE: INFRASTRUCTURE VERIFICATION SERVICE")
     print("=" * 60)
-    
+
     docker_ok = verify_docker()
     print("-" * 60)
     postgres_ok = await verify_postgres()
     print("=" * 60)
-    
+
     if docker_ok and postgres_ok:
         print("[SETUP OK] Local infrastructure is fully verified!")
         sys.exit(0)

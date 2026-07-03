@@ -420,17 +420,17 @@ class ClusteringService:
 
         await self._update_story_summary(story, articles)
         rep_article = await self._update_story_title(story, articles)
-        
+
         if rep_article:
             story.representative_article_id = rep_article.id
-            
+
         unique_publishers = {a.publisher_id for a in articles}
         story.publisher_diversity = len(unique_publishers)
 
         self._update_importance_score(story, articles)
         self._update_trending_score(story, articles)
         self._update_formation_evidence(story, articles)
-        
+
         # Expose a structured context object for future Retrieval-Augmented Generation (RAG)
         if articles:
             rep_art = rep_article or articles[0]
@@ -446,7 +446,7 @@ class ClusteringService:
                 "named_entities": story.formation_evidence.get("shared_entities", {}) if story.formation_evidence else {},
                 "topics": story.formation_evidence.get("shared_topics", []) if story.formation_evidence else []
             }
-            
+
         self._update_milestone3_fields(story, articles)
 
     async def _update_story_summary(
@@ -527,7 +527,7 @@ class ClusteringService:
             if best_article:
                 story.title = best_article.title
                 return best_article
-            elif articles:
+            else:
                 story.title = articles[0].title
                 return articles[0]
 
@@ -535,6 +535,8 @@ class ClusteringService:
             logger.error(f"Failed to update title for Story {story.id}: {e}")
             if articles:
                 story.title = articles[0].title
+                return articles[0]
+            return None
 
     def _update_importance_score(
         self, story: Story, articles: List[Article]

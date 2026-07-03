@@ -60,3 +60,32 @@ dump.rdb
 reports/
 backend/reports/
 backend/data/
+
+# spaCy downloaded models (large binary files, re-downloadable)
+backend/models/
+*.tar.gz
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Pytest artifacts
+.pytest_cache/
+**/test-results/
+
+# Alembic compiled migrations cache
+backend/app/database/migrations/__pycache__/
+
+# Windows temp files
+desktop.ini
+$RECYCLE.BIN/
+
+# Node (if frontend is added later)
+node_modules/
+.next/
+dist/
+
+# Secrets / local overrides (never commit these)
+.env.local
+.env.production
+secrets.json

@@ -151,10 +151,10 @@ Everything runs locally on a single developer machine with `docker compose up -d
 
 | Type | Trigger | Action |
 |------|---------|--------|
-| `EXACT_DUPLICATE` | Same `content_hash` | Link to original story, record in `article_duplicates`, 50% quality penalty |
-| `SEMANTIC_DUPLICATE` | cosine similarity ≥ 0.95 | Link to same story, record in `article_duplicates`, 50% quality penalty |
-| `UPDATED_ARTICLE` | Same URL, different content hash | Link to same story, versioned hash URL link, record in `article_duplicates` |
-| `CORRECTED_ARTICLE` | Same publisher, cosine ≥ 0.85, correction keywords | Link to same story, record in `article_duplicates` |
+| `EXACT_DUPLICATE` | Same `content_hash` | Link to original story, record in `article_duplicates` |
+| `SEMANTIC_DUPLICATE` | cosine similarity ≥ 0.95 | Link to same story, record in `article_duplicates` |
+| `UPDATED_ARTICLE` | (reserved Milestone 3) | — |
+| `CORRECTED_ARTICLE` | (reserved Milestone 3) | — |
 
 ---
 
@@ -200,6 +200,8 @@ The following fields exist in the schema but contain no business logic yet:
 | `Story` | `summary_quick` | AI-generated quick summary |
 | `Story` | `summary_beginner` | AI-generated beginner summary |
 | `Story` | `summary_professional` | AI-generated expert summary |
+| `Article` | `UPDATED_ARTICLE` type | RSS update detection |
+| `Article` | `CORRECTED_ARTICLE` type | Correction detection |
 
 ---
 

@@ -104,19 +104,19 @@ async def collect_news():
     print("      ADAPTIVE NEWSSPHERE: MASS NEWS INGESTION CRAWLER")
     print("=" * 60)
     print(f"Connecting to database: {db_url.split('@')[-1]}")
-    
+
     engine = create_async_engine(db_url, echo=False)
     async_session = async_sessionmaker(bind=engine, expire_on_commit=False)
-    
+
     overall_stats = {
         "inserted": 0,
         "skipped_duplicate": 0,
         "errors": 0
     }
-    
+
     async with async_session() as session:
         service = IngestionService(session)
-        
+
         # 1. Register all publishers first
         print("\n[*] Registering news publishers...")
         for feed in NEWS_FEEDS:
@@ -134,7 +134,7 @@ async def collect_news():
                 session.add(new_pub)
                 print(f"  [+] Registered: {feed['name']} (ID: {feed['id']})")
         await session.commit()
-        
+
         # 2. Ingest articles from each feed
         print("\n[*] Starting ingestion sequence...")
         for feed in NEWS_FEEDS:
@@ -142,14 +142,14 @@ async def collect_news():
             try:
                 stats = await service.ingest_feed(feed["id"], feed["feed_url"])
                 print(f"     [OK] Inserted: {stats['inserted']} | Skipped: {stats['skipped_duplicate']} | Errors: {stats['errors']}")
-                
+
                 overall_stats["inserted"] += stats["inserted"]
                 overall_stats["skipped_duplicate"] += stats["skipped_duplicate"]
                 overall_stats["errors"] += stats["errors"]
             except Exception as e:
                 print(f"     [ERROR] Ingestion failed for {feed['name']}: {e}")
                 overall_stats["errors"] += 1
-                
+
     print("=" * 60)
     print("                      CRAWL STATISTICS")
     print("=" * 60)
@@ -157,7 +157,7 @@ async def collect_news():
     print(f"  Total Duplicates Skipped  : {overall_stats['skipped_duplicate']}")
     print(f"  Total Failed Operations   : {overall_stats['errors']}")
     print("=" * 60)
-    
+
     await engine.dispose()
 
 if __name__ == "__main__":
