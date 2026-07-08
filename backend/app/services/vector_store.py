@@ -16,6 +16,7 @@ class VectorStoreService:
 
         self.collection_name = "articles"
         self.story_collection_name = "stories"
+        self.user_preferences_collection_name = "user_preferences"  # Milestone 4
 
         # Ensure target collections are initialized
         self._ensure_collections_exist()
@@ -44,6 +45,21 @@ class VectorStoreService:
                 logger.info(f"Creating Qdrant collection: '{self.story_collection_name}' (dim=384, dist=COSINE)...")
                 self.client.create_collection(
                     collection_name=self.story_collection_name,
+                    vectors_config=models.VectorParams(
+                        size=384,
+                        distance=models.Distance.COSINE
+                    )
+                )
+                created_any = True
+
+            # 3. Create user_preferences collection (Milestone 4)
+            if self.user_preferences_collection_name not in collection_names:
+                logger.info(
+                    f"Creating Qdrant collection: '{self.user_preferences_collection_name}' "
+                    "(dim=384, dist=COSINE)..."
+                )
+                self.client.create_collection(
+                    collection_name=self.user_preferences_collection_name,
                     vectors_config=models.VectorParams(
                         size=384,
                         distance=models.Distance.COSINE

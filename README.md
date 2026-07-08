@@ -1,77 +1,115 @@
-# Adaptive NewsSphere Backend (Milestone 1)
+# Adaptive NewsSphere — AI-Powered News Intelligence Platform
 
-Adaptive NewsSphere is an AI-powered personalized news intelligence platform. This repository contains the core Python backend, database mappings, and ingestion pipelines structured using Clean Architecture principles.
+Adaptive NewsSphere is a fully deterministic, AI-powered personalized news intelligence platform. The backend implements semantic clustering, story verification, and a recommendation engine — all without LLMs, paid APIs, or cloud services.
+
+**Current Release:** `v0.4.0` — Recommendation Engine
+
+---
+
+## Milestone Progress
+
+| Milestone | Name | Status |
+|---|---|---|
+| 1 | Infrastructure & Ingestion | ✅ Released (v0.1.0) |
+| 2 | Semantic Intelligence | ✅ Released (v0.2.0) |
+| 3 | Story Intelligence & Verification | ✅ Released (v0.3.0) |
+| **4** | **Recommendation Engine** | **✅ Released (v0.4.0)** |
+| 5 | Conversational AI (Q&A) | 🔜 Planned |
+| 6 | Frontend & Auth | 🔜 Planned |
 
 ---
 
 ## Technical Stack
-*   **API Framework:** FastAPI (Asynchronous Web Framework)
-*   **Relational Database:** PostgreSQL 16 (running in Docker container on port **5433**)
-*   **Cache & Feature Store:** Redis (running in Docker container on port **6379**)
-*   **Vector Search Engine:** Qdrant (running in Docker container on port **6333**)
-*   **ORM Mapping:** SQLAlchemy 2.0 (using `asyncpg` async driver)
-*   **Database Migrations:** Alembic
+
+| Layer | Technology |
+|---|---|
+| API Framework | FastAPI (async) |
+| Relational DB | PostgreSQL 16 (Docker, port **5433**) |
+| Vector DB | Qdrant (Docker, port **6333**) |
+| Cache | Redis (Docker, port **6379**) |
+| ORM | SQLAlchemy 2.0 (asyncpg) |
+| Migrations | Alembic |
+| Embeddings | sentence-transformers (`all-MiniLM-L6-v2`, 384-dim, CPU) |
+| NLP | spaCy + KeyBERT (deterministic, no LLMs) |
+
+---
+
+## API Endpoints (v3.0.0)
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/` | Welcome + version info |
+| `GET` | `/health` | Database connectivity check |
+| `GET` | `/docs` | Interactive Swagger UI |
+| `GET` | `/api/v1/metrics` | Pipeline performance statistics |
+| `POST` | `/api/v1/metrics/reset` | Reset metrics (dev only) |
+| `GET` | `/api/v1/feed/health` | Global recommendation engine health |
+| `GET` | `/api/v1/feed/{user_id}` | Personalized ranked news feed |
+| `POST` | `/api/v1/feed/interact` | Record user interaction |
+| `GET` | `/api/v1/feed/{user_id}/profile/health` | User profile diagnostics |
 
 ---
 
 ## Port Conflict Design (Why Port 5433?)
-To ensure a frictionless local development experience, this project maps the PostgreSQL container to host port **5433** (`5433:5432`). 
-*   This prevents conflicts with any native PostgreSQL Windows service that might already be running on port **5432**.
-*   The container still listens on port **5432** internally, meaning no modifications are needed inside the Docker virtual network.
-*   *Note:* If you do not have PostgreSQL installed natively on your host machine and wish to restore the default port mapping to `5432`, simply update `ports` in `docker-compose.yml` to `"5432:5432"` and modify `POSTGRES_PORT=5432` inside your `.env` file.
+
+PostgreSQL maps to host port **5433** (`5433:5432`) to prevent conflicts with any native PostgreSQL service on port 5432. To revert to 5432, update `docker-compose.yml` and `.env`.
 
 ---
 
 ## Local Development Setup
 
 ### 1. Prerequisites
-*   Windows 11 with **WSL2** enabled.
-*   **Python 3.13** installed on host.
-*   **Docker Desktop** installed and running.
+- Windows 11 with **WSL2** enabled
+- **Python 3.13** installed on host
+- **Docker Desktop** installed and running
 
-### 2. Copy Local Configuration
-From the workspace root directory `E:\News`, copy the configuration template:
+### 2. Configure Environment
 ```bash
 cp .env.example .env
 ```
 
-### 3. Spin Up Infrastructure
-We provide a Windows PowerShell script to automate checks, verify port states, spin up containers, and run migrations in a single command:
+### 3. Start Infrastructure
 ```powershell
 .\backend\scripts\start-dev.ps1
 ```
-*Alternatively, to do it manually:*
+Or manually:
 ```bash
-# 1. Start containers in daemon mode
 docker compose up -d
-
-# 2. Apply database migrations
-cd backend
-alembic upgrade head
+cd backend && alembic upgrade head
 ```
 
-### 4. Run Pytest Suites
-Ensure all unit and integration tests pass:
+### 4. Run Tests
 ```powershell
 $env:PYTHONPATH="backend"
-.\.venv\Scripts\pytest backend/tests/
+.\.venv\Scripts\pytest backend/tests/ -v
 ```
+Expected: **56 tests passed**
 
-### 5. Launch FastAPI Application Server
-Start the FastAPI development server with hot reload enabled:
+### 5. Launch API Server
 ```bash
 cd backend
 uvicorn app.main:app --reload
 ```
-*   **Interactive API Docs:** http://localhost:8000/docs
-*   **Database Connection Health Endpoint:** http://localhost:8000/health
+- API Docs: http://localhost:8000/docs
+- Health: http://localhost:8000/health
+- Feed: http://localhost:8000/api/v1/feed/{user_id}
 
-### 6. Tear Down Infrastructure
-To stop all Docker containers and clean up the virtual network:
+### 6. Seed Test Users
+```bash
+$env:PYTHONPATH="backend"
+python backend/scripts/seed_users.py
+```
+
+### 7. Run Analytics Report
+```bash
+$env:PYTHONPATH="backend"
+python backend/scripts/generate_analytics.py
+```
+
+### 8. Stop Infrastructure
 ```powershell
 .\backend\scripts\stop-dev.ps1
 ```
-*(Or manually run `docker compose down`)*
 
 ---
 
@@ -80,14 +118,34 @@ To stop all Docker containers and clean up the virtual network:
 ```text
 backend/
 ├── app/
-│   ├── api/                # Routing, controllers, and endpoint layers
-│   ├── core/               # App configuration (config.py) and logging (logging.py)
-│   ├── database/           # Connection handlers and ORM models
-│   │   ├── connection.py   # Async database session manager
-│   │   ├── migrations/     # Alembic schema migrationsversions
-│   │   └── models/         # Segmented domain schemas (user, article, story, etc.)
-│   ├── services/           # Business logic (RSS ingestion parsing)
-│   ├── utils/              # Cleaners and hash helpers
-│   └── workers/            # Ingest standalone runners
-└── tests/                  # Pytest verification suites
+│   ├── api/routes/         # Routing: metrics.py, feed.py
+│   ├── core/               # config.py (all settings & feature flags), logging.py
+│   ├── database/
+│   │   ├── connection.py   # Async session manager
+│   │   ├── migrations/     # Alembic schema versions
+│   │   └── models/         # Domain models: user, user_profile, article, story,
+│   │                       #   recommendation, interaction, conversation, ...
+│   ├── services/           # Business logic: clustering, nlp_processor,
+│   │                       #   preference_engine, feed_assembler, vector_store
+│   ├── utils/              # Text cleaners, hash helpers
+│   └── workers/            # rss_worker, preference_worker
+├── scripts/
+│   ├── generate_analytics.py  # 12-section analytics report
+│   ├── seed_users.py          # Dev utility: seed test users
+│   └── ...
+└── tests/                  # pytest suites (56 tests)
+
+docs/
+└── recommendation-engine.md   # Recommendation engine documentation
 ```
+
+---
+
+## Engineering Philosophy
+
+- 🚫 **No LLMs** — all intelligence is deterministic (EMA, cosine similarity, exponential decay)
+- 🆓 **Completely free** — no paid APIs, no cloud services
+- 🏠 **Local-first** — Redis + Qdrant + PostgreSQL in Docker
+- 🤖 **CPU-friendly** — all inference uses lightweight sentence-transformers
+- ⚙️ **Configurable** — all ranking weights and feature flags in `config.py`
+- 🧩 **Modular Monolith** — Clean Architecture, independently testable services

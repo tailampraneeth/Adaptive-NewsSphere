@@ -1,5 +1,6 @@
 from app.database.models.base import Base
 from app.database.models.user import User
+from app.database.models.user_profile import UserProfile
 from app.database.models.publisher import Publisher
 from app.database.models.story import Story, StoryRelation
 from app.database.models.article import Article
@@ -12,6 +13,7 @@ from app.database.models.recommendation import UserRecommendationLog
 __all__ = [
     "Base",
     "User",
+    "UserProfile",
     "Publisher",
     "Story",
     "StoryRelation",

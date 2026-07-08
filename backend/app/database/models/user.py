@@ -1,6 +1,7 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import String, DateTime, func
+from typing import Optional
+from sqlalchemy import String, DateTime, Integer, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database.models.base import Base
 
@@ -27,6 +28,29 @@ class User(Base):
         onupdate=func.now()
     )
 
+    # ── Milestone 4: Recommendation Engine ───────────────────────────────────
+    # Qdrant point ID for this user's preference embedding.
+    # The raw 384-dim vector lives in Qdrant; this is the lookup key.
+    preference_vector_id: Mapped[Optional[str]] = mapped_column(
+        String(36),
+        nullable=True,
+        index=True
+    )
+    # Running total of all interactions — determines cold-start vs warm status.
+    interaction_count: Mapped[int] = mapped_column(
+        Integer,
+        default=0,
+        server_default="0",
+        nullable=False
+    )
+    # Timestamp of the last feed request served to this user.
+    last_feed_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+
     # Relationships
     interactions = relationship("UserInteraction", back_populates="user", cascade="all, delete-orphan")
     chat_sessions = relationship("ChatSession", back_populates="user", cascade="all, delete-orphan")
+    recommendation_logs = relationship("UserRecommendationLog", back_populates="user", cascade="all, delete-orphan")
+    profile = relationship("UserProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
