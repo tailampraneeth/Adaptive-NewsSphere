@@ -22,6 +22,7 @@ from app.core.logging import logger
 from app.database.connection import get_db
 from app.api.routes.metrics import router as metrics_router
 from app.api.routes.feed import router as feed_router
+from app.api.routes.chat import router as chat_router
 
 
 @asynccontextmanager
@@ -65,13 +66,14 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Adaptive NewsSphere API",
     description="AI-Powered Personalized News Intelligence Platform Backend",
-    version="3.0.0",
+    version="4.0.0",
     lifespan=lifespan,
 )
 
 # ── Routers ──────────────────────────────────────────────────────────────────
 app.include_router(metrics_router)
 app.include_router(feed_router)
+app.include_router(chat_router)
 
 
 # ── Base Endpoints ────────────────────────────────────────────────────────────
@@ -82,13 +84,15 @@ async def root() -> dict:
     return {
         "status": "online",
         "message": "Welcome to the Adaptive NewsSphere News Intelligence Platform API.",
-        "version": "3.0.0",
+        "version": "4.0.0",
         "docs": "/docs",
         "endpoints": {
             "metrics": "/api/v1/metrics",
             "feed": "/api/v1/feed/{user_id}",
             "interact": "/api/v1/feed/interact",
             "profile_health": "/api/v1/feed/{user_id}/profile/health",
+            "chat": "/api/v1/chat/sessions",
+            "chat_health": "/api/v1/chat/health"
         },
     }
 

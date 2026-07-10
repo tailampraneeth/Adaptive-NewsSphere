@@ -64,6 +64,7 @@ async def run_analytics():
                     article_count=12
                 )
                 s.category = "Technology"
+                
                 log = UserRecommendationLog(
                     user_id=u.id,
                     story_id=s.id,
@@ -78,7 +79,70 @@ async def run_analytics():
                         "source": "semantic_similarity"
                     }
                 )
-                session.add_all([u, s, log])
+
+                # Seed conversational AI entities
+                from app.database.models.conversation import ChatSession, ChatMessage
+                session_id = uuid.uuid4()
+                chat_session = ChatSession(
+                    id=session_id,
+                    user_id=u.id,
+                    story_id=s.id,
+                    title="Self-Supervised Learning Discussion",
+                    message_count=2
+                )
+                user_msg = ChatMessage(
+                    session_id=session_id,
+                    sender="user",
+                    message="What is the impact of self-supervised learning on CPUs?",
+                    citations=[]
+                )
+                assistant_msg = ChatMessage(
+                    session_id=session_id,
+                    sender="assistant",
+                    message="According to [Source: TechPub], it makes CPU models highly efficient and saves costs.",
+                    citations=[{
+                        "article_id": str(uuid.uuid4()),
+                        "publisher_name": "TechPub",
+                        "published_at": "2026-07-09T00:00:00Z",
+                        "title": "TechPub article",
+                        "similarity": 0.81,
+                        "confidence": 0.81
+                    }],
+                    prompt_version="v1",
+                    chat_metadata={
+                        "conversation_engine_version": "v1",
+                        "retrieval_latency_ms": 15.2,
+                        "llm_latency_ms": 1200.0,
+                        "total_latency_ms": 1215.2,
+                        "retrieved_article_count": 1,
+                        "average_similarity": 0.81,
+                        "highest_similarity": 0.81,
+                        "citations_count": 1,
+                        "context_size_chars": 2000,
+                        "token_estimate": 500,
+                        "history_messages_used": 0,
+                        "history_truncated": False,
+                        "retrieval_count": 1,
+                        "confidence": 0.85,
+                        "unanswered": False,
+                        "retrieval_trace": {
+                            "top_k": 5,
+                            "threshold": 0.55,
+                            "retrieved_before_filter": 3,
+                            "retrieved_after_filter": 1,
+                            "passed_threshold": True
+                        },
+                        "streaming_metrics": {
+                            "first_token_latency_ms": 120.0,
+                            "stream_duration_ms": 1080.0,
+                            "estimated_output_tokens": 20
+                        },
+                        "prompt_size_chars": 2500,
+                        "response_size_chars": 80
+                    }
+                )
+
+                session.add_all([u, s, log, chat_session, user_msg, assistant_msg])
                 await session.commit()
                 print("[OK] Seeded local SQLite test.db with mock analytics records.")
 
@@ -440,6 +504,106 @@ async def run_analytics():
         md_content += """
 ---
 
+## 13. Conversational AI & RAG Analytics
+
+"""
+        # ── 13. Conversational AI & RAG Analytics ─────────────────────────────
+        from app.database.models.conversation import ChatSession, ChatMessage
+
+        total_sessions = (await session.execute(select(func.count(ChatSession.id)))).scalar() or 0
+        total_messages = (await session.execute(select(func.count(ChatMessage.id)))).scalar() or 0
+
+        chat_metadata_query = await session.execute(
+            select(ChatMessage.chat_metadata).where(ChatMessage.sender == "assistant")
+        )
+        chat_meta_list = []
+        for row in chat_metadata_query.all():
+            meta = row[0]
+            if isinstance(meta, str):
+                try:
+                    meta = json.loads(meta)
+                except Exception:
+                    meta = None
+            if isinstance(meta, dict):
+                chat_meta_list.append(meta)
+
+        retrieval_latencies = []
+        llm_latencies = []
+        total_latencies = []
+        citations_counts = []
+        articles_counts = []
+        similarities = []
+        unanswered_count = 0
+        confidences = []
+
+        # Refinement analytics variables
+        retrieved_chunks = []
+        context_sizes = []
+        prompt_sizes = []
+        response_sizes = []
+
+        for meta in chat_meta_list:
+            retrieval_latencies.append(meta.get("retrieval_latency_ms", 0.0))
+            llm_latencies.append(meta.get("llm_latency_ms", 0.0))
+            total_latencies.append(meta.get("total_latency_ms", 0.0))
+            citations_counts.append(meta.get("citations_count", 0))
+            articles_counts.append(meta.get("retrieved_article_count", 0))
+            similarities.append(meta.get("average_similarity", 0.0))
+            confidences.append(meta.get("confidence", 0.0))
+            if meta.get("unanswered", False):
+                unanswered_count += 1
+            
+            trace = meta.get("retrieval_trace") or {}
+            retrieved_chunks.append(trace.get("retrieved_after_filter", 0))
+            context_sizes.append(meta.get("context_size_chars", 0))
+            prompt_sizes.append(meta.get("prompt_size_chars", 0))
+            response_sizes.append(meta.get("response_size_chars", 0))
+
+        avg_retrieval_latency = sum(retrieval_latencies) / len(retrieval_latencies) if retrieval_latencies else 0.0
+        avg_llm_latency = sum(llm_latencies) / len(llm_latencies) if llm_latencies else 0.0
+        avg_total_latency = sum(total_latencies) / len(total_latencies) if total_latencies else 0.0
+        avg_citations = sum(citations_counts) / len(citations_counts) if citations_counts else 0.0
+        avg_retrieved_articles = sum(articles_counts) / len(articles_counts) if articles_counts else 0.0
+        avg_chat_similarity = sum(similarities) / len(similarities) if similarities else 0.0
+        avg_chat_confidence = sum(confidences) / len(confidences) if confidences else 0.0
+        unanswered_ratio = unanswered_count / len(chat_meta_list) if chat_meta_list else 0.0
+        avg_msg_per_session = total_messages / total_sessions if total_sessions else 0.0
+
+        avg_retrieved_chunks_val = sum(retrieved_chunks) / len(retrieved_chunks) if retrieved_chunks else 0.0
+        avg_context_size_val = sum(context_sizes) / len(context_sizes) if context_sizes else 0.0
+        avg_prompt_size_val = sum(prompt_sizes) / len(prompt_sizes) if prompt_sizes else 0.0
+        avg_response_size_val = sum(response_sizes) / len(response_sizes) if response_sizes else 0.0
+
+        # Calculate session message distribution
+        session_messages_query = await session.execute(
+            select(ChatSession.message_count)
+        )
+        msg_counts = session_messages_query.scalars().all()
+        msg_counts_dist = Counter(msg_counts)
+
+        md_content += f"""*   **Total Chat Sessions:** {total_sessions}
+*   **Total Chat Messages:** {total_messages}
+*   **Average Messages per Session:** {avg_msg_per_session:.2f}
+*   **Average Retrieval Latency:** {avg_retrieval_latency:.2f} ms
+*   **Average LLM Latency:** {avg_llm_latency:.2f} ms
+*   **Average Response Latency (Total):** {avg_total_latency:.2f} ms
+*   **Average Citations per Response:** {avg_citations:.2f}
+*   **Average Retrieved Articles per Query:** {avg_retrieved_articles:.2f}
+*   **Average Retrieved Chunks per Query:** {avg_retrieved_chunks_val:.2f}
+*   **Average Context Size:** {avg_context_size_val:.2f} chars
+*   **Average Prompt Size:** {avg_prompt_size_val:.2f} chars
+*   **Average Response Length:** {avg_response_size_val:.2f} chars
+*   **Average Retrieval Cosine Similarity:** {avg_chat_similarity:.4f}
+*   **Average Response Confidence Score:** {avg_chat_confidence:.4f}
+*   **Unanswered Query Percentage:** {unanswered_ratio * 100:.1f}% ({unanswered_count} unanswered due to no context)
+*   **Conversation Length Distribution:**
+"""
+        for count, freq in sorted(msg_counts_dist.items()):
+            md_content += f"    *   *Sessions with {count} messages*: {freq} ({freq / max(1, total_sessions) * 100:.1f}%)\n"
+
+        md_content += """
+---
+
 ## 11. Engineering Recommendations for Data & Model Quality
 
 1.  **Zero-Shot Category Expansion:** Leverage semantic models to dynamically classify niche articles rather than defaulting to "World".
@@ -448,6 +612,7 @@ async def run_analytics():
 4.  **Story Archiving Policy:** Implement a cron scheduler to flag inactive stories after 72 hours of no new articles to optimize vector search latency.
 5.  **Recommendation A/B Testing:** Use ENABLE_* feature flags to run controlled experiments comparing cold-start vs personalized strategies.
 6.  **Preference Vector Refresh:** Schedule periodic re-normalization of user preference vectors to prevent embedding drift over time.
+7.  **Grounded Prompt Optimization:** Periodically audit the prompt metadata logs to identify queries marked as "unanswered" and evaluate expansion opportunities for coverage indexing.
 """
 
         # Write to artifacts directory
@@ -457,7 +622,7 @@ async def run_analytics():
         with open(report_path, "w", encoding="utf-8") as f:
             f.write(md_content)
 
-        print(f"[OK] 12-section Quality & Analytics report compiled successfully at: {report_path}")
+        print(f"[OK] 13-section Quality & Analytics report compiled successfully at: {report_path}")
 
     await engine.dispose()
 

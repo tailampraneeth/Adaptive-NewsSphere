@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from typing import List, Optional
-from sqlalchemy import String, Text, DateTime, ForeignKey, BigInteger, JSON, func
+from sqlalchemy import String, Text, DateTime, ForeignKey, BigInteger, Integer, JSON, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database.models.base import Base
 
@@ -19,6 +19,14 @@ class ChatSession(Base):
     )
     story_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("stories.id", ondelete="CASCADE"),
+        nullable=False
+    )
+    title: Mapped[Optional[str]] = mapped_column(
+        String(255),
+        nullable=True
+    )
+    message_count: Mapped[int] = mapped_column(
+        default=0,
         nullable=False
     )
 
@@ -42,7 +50,7 @@ class ChatMessage(Base):
     __tablename__ = "chat_messages"
 
     id: Mapped[int] = mapped_column(
-        BigInteger,
+        BigInteger().with_variant(Integer, "sqlite"),
         primary_key=True,
         autoincrement=True
     )
@@ -64,6 +72,16 @@ class ChatMessage(Base):
         JSON,
         default=list
     )  # Array of citations storing article ID and cited offsets
+    prompt_version: Mapped[str] = mapped_column(
+        String(20),
+        default="v1",
+        server_default="v1",
+        nullable=False
+    )
+    chat_metadata: Mapped[Optional[dict]] = mapped_column(
+        JSON,
+        nullable=True
+    )
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

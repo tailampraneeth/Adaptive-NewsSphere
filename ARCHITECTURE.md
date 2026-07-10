@@ -1,7 +1,7 @@
 # Adaptive NewsSphere — System Architecture
 
-> **Current Release: v0.4.0 — Recommendation Engine**
-> Status: 4 of 6 milestones complete. Local-first. Docker-based. No LLMs. No paid APIs.
+> **Current Release: v0.5.0 — Conversational AI**
+> Status: 5 of 6 milestones complete. Local-first. Docker-based. No LLMs. No paid APIs.
 
 ---
 
@@ -23,7 +23,7 @@ Everything runs locally on a single developer machine with `docker compose up -d
 | 2 | Semantic Intelligence | ✅ Complete | v0.2.0 |
 | 3 | Story Intelligence & Verification | ✅ Complete | v0.3.0 |
 | 4 | Recommendation Engine | ✅ Complete | v0.4.0 |
-| 5 | Conversational AI (Q&A) | 🔜 Planned | v0.5.0 |
+| 5 | Conversational AI (Q&A) | ✅ Complete | v0.5.0 |
 | 6 | Frontend & Auth | 🔜 Planned | v0.6.0 |
 
 ---
@@ -110,6 +110,28 @@ Everything runs locally on a single developer machine with `docker compose up -d
 │  PreferenceUpdateWorker (async background task):                   │
 │    - Positive: click, bookmark, share, dwell                      │
 │    - Negative: not_interested, hide_story, mute_category/publisher│
+└───────────────────────────────┬──────────────────────────────────┘
+                                │ verified + scored stories
+┌───────────────────────────────▼──────────────────────────────────┐
+│              MILESTONE 5: CONVERSATIONAL AI (RAG)                 │
+│                                                                    │
+│  LLMService & BaseLLMProvider:                                     │
+│    - BaseLLMProvider abstract interface                           │
+│    - GeminiProvider (Google Generative AI free-tier integration)   │
+│    - MockProvider (deterministic response & citation simulator)    │
+│                                                                    │
+│  RAGService:                                                       │
+│    - RAG Context Retrieval: searches Qdrant articles collection    │
+│      applying story_id filter & similarity threshold               │
+│    - Chunks articles via RAGChunker (1500 chars, 300 overlap)      │
+│    - Computes answer confidence score deterministically            │
+│    - Grounding system prompt construction                          │
+│    - Citation extraction via publisher regex                       │
+│    - No-Context optimization: skips LLM call if no chunks match    │
+│                                                                    │
+│  ConversationService:                                              │
+│    - Manages ChatSession lifecycle, automatic title creation,      │
+│      rolling history message bounds, and database commits          │
 └───────────────────────────────┬──────────────────────────────────┘
                                 │
 ┌───────────────────────────────▼──────────────────────────────────┐
@@ -357,6 +379,25 @@ Every story recommendation persists a structured `recommendation_metadata` JSON:
 
 ---
 
+## Milestone 5 — Conversational AI (Q&A)
+
+### Grounded Context Q&A Loop
+The engine provides a conversational interface bound to individual stories to answer user queries safely, preventing hallucinations by restricting model context strictly to retrieved documents of that story.
+
+### Pipeline Orchestration
+1. **Query Embedding:** Encodes query using local `EmbedderService`.
+2. **Context Retrieval:** Queries Qdrant `articles` collection filtering for the story's `story_id`.
+3. **No-Context Optimizer:** If zero retrieved chunks meet `RAG_SIMILARITY_THRESHOLD`, the LLM invocation is skipped and `NO_CONTEXT_MESSAGE` is returned immediately.
+4. **Prompt Construction:** The `PromptBuilderService` compiles instructions, context, and user history into a single payload.
+5. **LLM Invocation:** Runs through `LLMService` which communicates with the configured `BaseLLMProvider` (e.g. `GeminiProvider` or `MockProvider`).
+6. **Streaming & Telemetry:** If streaming is enabled, yields tokens as Server-Sent Events (SSE). Measures stream durations, first token latency, and records them in PostgreSQL `chat_messages` logs under `chat_metadata`.
+
+### Grounded Confidence Score
+Determined by context coverage, average similarity, retrieved article count, and citation count:
+$$C = 0.50 \cdot \text{Similarity} + 0.20 \cdot \min(1.0, \frac{N_{\text{articles}}}{3}) + 0.10 \cdot \min(1.0, \frac{C_{\text{chars}}}{6000}) + 0.20 \cdot \min(1.0, \frac{N_{\text{citations}}}{2})$$
+
+---
+
 ## Database Schema Overview
 
 ```
@@ -383,6 +424,7 @@ users ──────── user_profiles (preference metadata)
 | `story_timelines` | 3 | Chronological story milestones |
 | `user_profiles` | 4 | Preference metadata (Qdrant pointer, mutes, drift tracking) |
 | `user_recommendation_logs` | 4 | Structured feed serving audit log |
+| `chat_sessions`, `chat_messages` | 5 | Conversational AI thread history and RAG diagnostics |
 
 ---
 
@@ -399,6 +441,12 @@ users ──────── user_profiles (preference metadata)
 | `GET` | `/api/v1/feed/{user_id}` | Personalized ranked news feed |
 | `POST` | `/api/v1/feed/interact` | Record user interaction (async) |
 | `GET` | `/api/v1/feed/{user_id}/profile/health` | User profile diagnostics |
+| `POST` | `/api/v1/chat/sessions` | Create conversational RAG session |
+| `GET` | `/api/v1/chat/sessions/{session_id}` | Get session details & history |
+| `POST` | `/api/v1/chat/sessions/{session_id}/message` | Send message (streaming/sync) |
+| `GET` | `/api/v1/chat/sessions/user/{user_id}/list` | List user sessions |
+| `DELETE` | `/api/v1/chat/sessions/{session_id}` | Delete conversational session |
+| `GET` | `/api/v1/chat/health` | Chat RAG pipeline diagnostics |
 
 ---
 
@@ -416,9 +464,10 @@ python scripts\run_clustering.py
 python scripts\classify_categories.py
 ```
 
-Seed test users (development):
+Seed test users & chat (development):
 ```powershell
 python scripts\seed_users.py
+python scripts\seed_chat.py
 ```
 
 Generate analytics report:
@@ -426,4 +475,4 @@ Generate analytics report:
 python scripts\generate_analytics.py
 ```
 
-See `docs\recommendation-engine.md` for the full Milestone 4 technical reference.
+See `docs\recommendation-engine.md` and `docs\conversation-engine.md` for full technical design details.

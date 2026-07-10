@@ -85,6 +85,21 @@ class Settings(BaseSettings):
     ENABLE_TRENDING_DECAY: bool = Field(default=True)
     ENABLE_NEGATIVE_FEEDBACK: bool = Field(default=True)
 
+    # ── Milestone 5: Conversational RAG ──────────────────────────────────────
+    LLM_PROVIDER: str = Field(default="gemini")       # "gemini" | "mock"
+    GEMINI_MODEL: str = Field(default="gemini-2.0-flash")
+    RAG_TOP_K: int = Field(default=5)                  # Top articles to retrieve
+    RAG_SIMILARITY_THRESHOLD: float = Field(default=0.55) # Min similarity score
+    RAG_PROMPT_VERSION: str = Field(default="v1")
+    RAG_MAX_CONTEXT_CHARS: int = Field(default=6000)   # Hard cap on context length
+    RAG_MAX_HISTORY_MESSAGES: int = Field(default=10)  # History depth
+    RAG_CHUNK_SIZE_CHARS: int = Field(default=1500)
+    RAG_CHUNK_OVERLAP_CHARS: int = Field(default=300)
+    ENABLE_RAG_STREAMING: bool = Field(default=True)
+    ENABLE_RAG_CITATIONS: bool = Field(default=True)
+    NO_CONTEXT_MESSAGE: str = Field(default="I do not have enough verified source information to answer this.")
+    CONVERSATION_ENGINE_VERSION: str = Field(default="v1")
+
     # Pydantic Settings Configuration
     model_config = SettingsConfigDict(
         env_file=os.path.join(

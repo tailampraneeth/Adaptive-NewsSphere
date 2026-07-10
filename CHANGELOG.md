@@ -3,6 +3,35 @@
 All notable changes to this project are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). Versioning: [Semantic Versioning](https://semver.org/).
 
+## [0.5.0] — 2026-07-10 — Conversational RAG Q&A Engine
+
+### Added
+- **Provider-Agnostic LLM Layer:**
+  - Decoupled RAG pipeline from model SDKs using a clean `BaseLLMProvider` interface.
+  - Implemented `GeminiProvider` using Google Generative AI free-tier.
+  - Implemented `MockProvider` supporting offline test executions and smart source-citation generation.
+- **Isolated RAG Coordination:**
+  - Implemented `RAGService` coordinating embedding encoding, Qdrant searches, context formatting, and citation parsing.
+  - Created `RAGChunker` to segment texts into character windows of 1500 with a 300 character overlap.
+- **No-Context Optimization:**
+  - Skips LLM provider calls when Qdrant returns 0 chunks above the relevance threshold, returning a deterministic fallback.
+- **Response Confidence & Citations:**
+  - Computes answer confidence mathematically from context similarities, retrieved counts, character coverage, and citations.
+  - Extracts `[Source: Publisher Name]` citations from response text and maps them back to database article records.
+- **Database Schema Enhancements:**
+  - Extended `ChatSession` model with `title` and `message_count`. Added title auto-generation from first user message.
+  - Extended `ChatMessage` model with `prompt_version` and `chat_metadata` columns.
+- **Alembic Migration `6b10a5e8f8dc`:**
+  - Manual migration script applying database changes for conversational AI.
+- **Conversational Health Diagnostics:**
+  - `GET /api/v1/chat/health` reporting model types, prompt versions, active sessions, and engine latencies.
+- **Expanded Analytics Script:**
+  - Updated `generate_analytics.py` to seed chat entries and compile Section 13 (Conversational AI & RAG Analytics) in `dataset_analytics_report.md`.
+- **Comprehensive Unit Tests:**
+  - Added 20 new tests in `tests/test_chat.py` verifying RAG logic, confidence scores, providers, SSE streaming, and health stats. All 20 tests pass.
+- **Type Safety & Linters:**
+  - Passed all `ruff` check and `mypy` type correctness checks with zero warnings/errors.
+
 ---
 
 ## [0.4.0] — 2026-07-09 — Recommendation Engine (with Refined Architecture)

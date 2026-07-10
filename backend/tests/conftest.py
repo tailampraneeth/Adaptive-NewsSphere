@@ -81,10 +81,13 @@ async def db_session(test_engine) -> AsyncGenerator[AsyncSession, None]:
         from app.database.models.duplicate import ArticleDuplicate
         from app.database.models.user_profile import UserProfile
         from app.database.models.recommendation import UserRecommendationLog
+        from app.database.models.conversation import ChatSession, ChatMessage
         from app.database.models.user import User
 
         # SQLite supports standard deletes, but user_profiles/recommendations might not be clean
         try:
+            await session.execute(delete(ChatMessage))
+            await session.execute(delete(ChatSession))
             await session.execute(delete(ArticleDuplicate))
             await session.execute(delete(Article))
             await session.execute(delete(Publisher))

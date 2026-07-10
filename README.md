@@ -2,7 +2,7 @@
 
 Adaptive NewsSphere is a fully deterministic, AI-powered personalized news intelligence platform. The backend implements semantic clustering, story verification, and a recommendation engine — all without LLMs, paid APIs, or cloud services.
 
-**Current Release:** `v0.4.0` — Recommendation Engine
+**Current Release:** `v0.5.0` — Conversational AI
 
 ---
 
@@ -13,8 +13,8 @@ Adaptive NewsSphere is a fully deterministic, AI-powered personalized news intel
 | 1 | Infrastructure & Ingestion | ✅ Released (v0.1.0) |
 | 2 | Semantic Intelligence | ✅ Released (v0.2.0) |
 | 3 | Story Intelligence & Verification | ✅ Released (v0.3.0) |
-| **4** | **Recommendation Engine** | **✅ Released (v0.4.0)** |
-| 5 | Conversational AI (Q&A) | 🔜 Planned |
+| 4 | Recommendation Engine | ✅ Released (v0.4.0) |
+| **5** | **Conversational AI (Q&A)** | **✅ Released (v0.5.0)** |
 | 6 | Frontend & Auth | 🔜 Planned |
 
 ---
@@ -34,7 +34,7 @@ Adaptive NewsSphere is a fully deterministic, AI-powered personalized news intel
 
 ---
 
-## API Endpoints (v3.0.0)
+## API Endpoints (v5.0.0)
 
 | Method | Path | Description |
 |---|---|---|
@@ -47,6 +47,12 @@ Adaptive NewsSphere is a fully deterministic, AI-powered personalized news intel
 | `GET` | `/api/v1/feed/{user_id}` | Personalized ranked news feed |
 | `POST` | `/api/v1/feed/interact` | Record user interaction |
 | `GET` | `/api/v1/feed/{user_id}/profile/health` | User profile diagnostics |
+| `POST` | `/api/v1/chat/sessions` | Create conversational RAG session |
+| `GET` | `/api/v1/chat/sessions/{session_id}` | Get session details & history |
+| `POST` | `/api/v1/chat/sessions/{session_id}/message` | Send message (streaming/sync) |
+| `GET` | `/api/v1/chat/sessions/user/{user_id}/list` | List user sessions |
+| `DELETE` | `/api/v1/chat/sessions/{session_id}` | Delete conversational session |
+| `GET` | `/api/v1/chat/health` | Chat RAG pipeline diagnostics |
 
 ---
 
@@ -83,7 +89,7 @@ cd backend && alembic upgrade head
 $env:PYTHONPATH="backend"
 .\.venv\Scripts\pytest backend/tests/ -v
 ```
-Expected: **56 tests passed**
+Expected: **81 tests passed**
 
 ### 5. Launch API Server
 ```bash
@@ -130,13 +136,15 @@ backend/
 │   ├── utils/              # Text cleaners, hash helpers
 │   └── workers/            # rss_worker, preference_worker
 ├── scripts/
-│   ├── generate_analytics.py  # 12-section analytics report
+│   ├── generate_analytics.py  # 13-section analytics report
 │   ├── seed_users.py          # Dev utility: seed test users
 │   └── ...
-└── tests/                  # pytest suites (56 tests)
+└── tests/                  # pytest suites (81 tests)
 
 docs/
-└── recommendation-engine.md   # Recommendation engine documentation
+├── recommendation-engine.md   # Recommendation engine design docs
+├── conversational-rag.md      # Conversational RAG pipeline reference
+└── conversation-engine.md     # RAG Refined telemetry architecture design
 ```
 
 ---
