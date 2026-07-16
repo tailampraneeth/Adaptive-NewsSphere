@@ -28,6 +28,7 @@ from app.services.feed_assembler import FeedAssemblerService
 from app.services.preference_engine import PreferenceEngineService
 from app.services.vector_store import VectorStoreService
 from app.workers.preference_worker import PreferenceUpdateWorker
+from app.api.dependencies import get_current_user
 
 router = APIRouter(prefix="/api/v1/feed", tags=["feed"])
 
@@ -184,18 +185,24 @@ async def get_feed(
     limit: int = 20,
     cursor: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> FeedResponse:
     """
     Returns a ranked, personalized news feed for the given user.
 
     - **Cold-start users** (< COLD_START_THRESHOLD interactions):
-      Stories ranked by `importance_score × trending_score × freshness_decay`.
+      Stories ranked by `importance_score * trending_score * freshness_decay`.
     - **Warm users**: Stories ranked via Qdrant ANN cosine similarity against
       the user's preference embedding, with composite scoring and freshness decay.
 
     Results are diversity-filtered (category, publisher caps) and deduplicated
     against stories served in the last 24 hours.
     """
+    if current_user.id != user_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied. Cannot request feed for another user."
+        )
     # Verify user exists
     stmt = select(User).where(User.id == user_id)
     res = await db.execute(stmt)

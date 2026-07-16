@@ -1,0 +1,88 @@
+.evidence-panel-container {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  width: 100%;
+}
+
+.evidence-scroller {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.evidence-node-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.evidence-node-hdr {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.75rem;
+}
+
+.evidence-claim-badge {
+  background-color: var(--primary-light);
+  color: var(--primary);
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+  text-transform: uppercase;
+}
+
+.evidence-agreement {
+  color: var(--text-secondary);
+}
+
+.evidence-statement {
+  font-size: 0.9rem;
+  font-style: italic;
+  color: var(--text-primary);
+  line-height: 1.5;
+  border-left: 3px solid var(--primary);
+  padding-left: 12px;
+}
+
+.evidence-attribution {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-top: 1px solid var(--card-border);
+  padding-top: 10px;
+}
+
+.attr-label {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+.attr-publishers-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.attr-pub-tag {
+  font-size: 0.72rem;
+  font-weight: 550;
+  color: var(--text-secondary);
+  background-color: var(--bg-secondary);
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+}
+
+.evidence-empty {
+  padding: 30px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}

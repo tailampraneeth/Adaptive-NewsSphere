@@ -1,0 +1,107 @@
+.story-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  backdrop-filter: blur(10px);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  transition: var(--transition-smooth);
+}
+
+.story-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--primary);
+}
+
+.story-card-header {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.score-high {
+  background-color: var(--primary-light);
+  color: var(--success);
+}
+
+.score-medium {
+  background-color: hsl(38, 70%, 93%);
+  color: var(--warning);
+}
+
+.score-low {
+  background-color: hsl(0, 65%, 93%);
+  color: var(--error);
+}
+
+.conflict-badge {
+  background-color: hsl(0, 65%, 93%);
+  color: var(--error);
+  border: 1px solid hsla(0, 65%, 50%, 0.2);
+}
+
+.trending-badge {
+  background-color: hsl(205, 30%, 93%);
+  color: var(--accent);
+}
+
+.story-title {
+  font-size: 1.15rem;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--text-primary);
+}
+
+.story-summary-preview p {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.story-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid var(--card-border);
+  padding-top: 15px;
+  font-size: 0.8rem;
+}
+
+.source-stats {
+  display: flex;
+  align-items: center;
+  color: var(--text-secondary);
+  gap: 6px;
+}
+
+.stat-separator {
+  color: var(--text-muted);
+}
+
+.story-meta-indicators {
+  color: var(--text-secondary);
+}
+
+.credibility-indicator strong {
+  color: var(--primary);
+}

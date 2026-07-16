@@ -2,9 +2,10 @@
 
 Adaptive NewsSphere is a fully deterministic, AI-powered personalized news intelligence platform. The backend implements semantic clustering, story verification, and a recommendation engine — all without LLMs, paid APIs, or cloud services.
 
-**Current Release:** `v0.5.0` — Conversational AI
+**Current Release:** `v0.7.0` — Production Demo & Frontend
 
 ---
+
 
 ## Milestone Progress
 
@@ -14,8 +15,9 @@ Adaptive NewsSphere is a fully deterministic, AI-powered personalized news intel
 | 2 | Semantic Intelligence | ✅ Released (v0.2.0) |
 | 3 | Story Intelligence & Verification | ✅ Released (v0.3.0) |
 | 4 | Recommendation Engine | ✅ Released (v0.4.0) |
-| **5** | **Conversational AI (Q&A)** | **✅ Released (v0.5.0)** |
-| 6 | Frontend & Auth | 🔜 Planned |
+| 5 | Conversational AI (Q&A) | ✅ Released (v0.5.0) |
+| 6 | Frontend & Auth | ✅ Released (v0.6.0) |
+| **7** | **Demo Mode & Verification** | **✅ Released (v0.7.0)** |
 
 ---
 
@@ -100,19 +102,30 @@ uvicorn app.main:app --reload
 - Health: http://localhost:8000/health
 - Feed: http://localhost:8000/api/v1/feed/{user_id}
 
-### 6. Seed Test Users
+### 6. Launch Frontend Client
+Ensure Node.js 18+ is installed on the host:
 ```bash
-$env:PYTHONPATH="backend"
-python backend/scripts/seed_users.py
+cd frontend
+npm install
+npm run dev
 ```
+The application will open at http://localhost:3000.
 
-### 7. Run Analytics Report
+### 7. Automatic Demo Mode & Seeding
+If you run with `DEMO_MODE=True` in `.env`, the FastAPI application will automatically check if the database is unseeded on startup. If unseeded, it will:
+1. Re-initialize database schemas
+2. Purge Qdrant vector collections
+3. Seed 300 stories and 2 demo users
+   - **Cold User:** `cold@test.com` (Password: `password123`)
+   - **Warm User:** `warm@test.com` (Password: `password123`)
+
+### 8. Run Analytics Report
 ```bash
 $env:PYTHONPATH="backend"
 python backend/scripts/generate_analytics.py
 ```
 
-### 8. Stop Infrastructure
+### 9. Stop Infrastructure
 ```powershell
 .\backend\scripts\stop-dev.ps1
 ```
@@ -124,7 +137,7 @@ python backend/scripts/generate_analytics.py
 ```text
 backend/
 ├── app/
-│   ├── api/routes/         # Routing: metrics.py, feed.py
+│   ├── api/routes/         # Routing: metrics.py, feed.py, auth.py, chat.py
 │   ├── core/               # config.py (all settings & feature flags), logging.py
 │   ├── database/
 │   │   ├── connection.py   # Async session manager
@@ -139,12 +152,20 @@ backend/
 │   ├── generate_analytics.py  # 13-section analytics report
 │   ├── seed_users.py          # Dev utility: seed test users
 │   └── ...
-└── tests/                  # pytest suites (81 tests)
+└── tests/                  # pytest suites
+
+frontend/                   # React 19 + Vite web interface
+├── src/
+│   ├── components/         # Calming theme UI elements
+│   ├── context/            # AuthContext, ThemeContext, NotificationContext
+│   └── services/           # Base Request API wrappers
 
 docs/
 ├── recommendation-engine.md   # Recommendation engine design docs
 ├── conversational-rag.md      # Conversational RAG pipeline reference
-└── conversation-engine.md     # RAG Refined telemetry architecture design
+├── conversation-engine.md     # RAG Refined telemetry architecture design
+├── frontend.md                # Frontend operations manual
+└── ui-architecture.md         # UI system architecture reference
 ```
 
 ---

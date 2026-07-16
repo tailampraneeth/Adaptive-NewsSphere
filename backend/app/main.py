@@ -23,6 +23,8 @@ from app.database.connection import get_db
 from app.api.routes.metrics import router as metrics_router
 from app.api.routes.feed import router as feed_router
 from app.api.routes.chat import router as chat_router
+from app.api.routes.auth import router as auth_router
+from app.api.routes.stories import router as stories_router
 
 
 @asynccontextmanager
@@ -33,6 +35,7 @@ async def lifespan(app: FastAPI):
     Startup: hydrates Redis preference cache from PostgreSQL so that
     returning users get sub-millisecond preference vector lookups
     from the first request after a server restart.
+    If DEMO_MODE is enabled and database is unseeded, auto-seeds mock data.
     """
     logger.info("Starting Adaptive NewsSphere API v3.0.0...")
     try:
@@ -41,6 +44,25 @@ async def lifespan(app: FastAPI):
         from app.database.connection import AsyncSessionLocal
         from app.services.vector_store import VectorStoreService
         from app.services.preference_engine import PreferenceEngineService
+        from sqlalchemy.future import select
+        from sqlalchemy import func
+        from app.database.models.story import Story
+
+        # Auto-seed if DEMO_MODE is True and database is empty/under-seeded
+        if settings.DEMO_MODE:
+            should_seed = False
+            async with AsyncSessionLocal() as db:
+                stmt = select(func.count()).select_from(Story)
+                res = await db.execute(stmt)
+                count = res.scalar() or 0
+                if count < 50:
+                    should_seed = True
+
+            if should_seed:
+                logger.info("DEMO_MODE is True and database is unseeded. Running auto-seeding...")
+                from scripts.seed_demo_data import seed_demo_mode_data
+                await seed_demo_mode_data()
+                logger.info("Auto-seeding of demo dataset completed successfully.")
 
         redis_client = aioredis.from_url(settings.REDIS_URL, decode_responses=False)
         vector_store = VectorStoreService()
@@ -56,7 +78,7 @@ async def lifespan(app: FastAPI):
 
         await redis_client.aclose()
     except Exception as e:
-        logger.warning(f"Redis hydration skipped (infrastructure not ready): {e}")
+        logger.warning(f"Lifespan initialization error: {e}")
 
     yield
 
@@ -74,6 +96,8 @@ app = FastAPI(
 app.include_router(metrics_router)
 app.include_router(feed_router)
 app.include_router(chat_router)
+app.include_router(auth_router)
+app.include_router(stories_router)
 
 
 # ── Base Endpoints ────────────────────────────────────────────────────────────
@@ -92,7 +116,9 @@ async def root() -> dict:
             "interact": "/api/v1/feed/interact",
             "profile_health": "/api/v1/feed/{user_id}/profile/health",
             "chat": "/api/v1/chat/sessions",
-            "chat_health": "/api/v1/chat/health"
+            "chat_health": "/api/v1/chat/health",
+            "auth_signup": "/api/v1/auth/signup",
+            "auth_login": "/api/v1/auth/login"
         },
     }
 

@@ -26,7 +26,7 @@ def upgrade() -> None:
     # ── users table ──────────────────────────────────────────────────────────
     op.add_column(
         "users",
-        sa.Column("preference_vector_id", sa.String(36), nullable=True, index=True)
+        sa.Column("preference_vector_id", sa.String(36), nullable=True)
     )
     op.add_column(
         "users",
@@ -52,7 +52,7 @@ def upgrade() -> None:
             sa.ForeignKey("users.id", ondelete="CASCADE"),
             primary_key=True
         ),
-        sa.Column("preference_vector_id", sa.String(36), nullable=True, index=True),
+        sa.Column("preference_vector_id", sa.String(36), nullable=True),
         sa.Column(
             "interaction_count",
             sa.Integer(),

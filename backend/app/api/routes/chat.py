@@ -26,6 +26,8 @@ from app.services.vector_store import VectorStoreService
 from app.services.llm_service import LLMService, get_llm_provider
 from app.services.rag_service import RAGService
 from app.services.conversation_service import ConversationService
+from app.api.dependencies import get_current_user
+from app.database.models.user import User
 
 logger = logging.getLogger("adaptive-newssphere.routes.chat")
 router = APIRouter(prefix="/api/v1/chat", tags=["conversational-ai"])
@@ -99,9 +101,15 @@ async def get_chat_health(db: AsyncSession = Depends(get_db)) -> ChatHealthRespo
 @router.post("/sessions", response_model=ChatSessionSimpleResponse, status_code=status.HTTP_201_CREATED, summary="Create chat session")
 async def create_chat_session(
     request: CreateSessionRequest,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ) -> ChatSession:
     """Creates a new conversational thread for a specific user and story cluster."""
+    if current_user.id != request.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot create chat session for another user."
+        )
     try:
         session = await ConversationService.create_session(
             db=db,
@@ -119,7 +127,8 @@ async def create_chat_session(
 @router.get("/sessions/{session_id}", response_model=ChatSessionResponse, summary="Get chat session details")
 async def get_chat_session(
     session_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ) -> ChatSession:
     """Retrieves session details and full history of chat messages."""
     session = await ConversationService.get_session(db, session_id)
@@ -128,30 +137,48 @@ async def get_chat_session(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Chat session {session_id} not found."
         )
+    if session.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied. This session belongs to another user."
+        )
     return session
 
 
 @router.get("/sessions/user/{user_id}/list", response_model=List[ChatSessionSimpleResponse], summary="List user sessions")
 async def list_user_sessions(
     user_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ) -> List[ChatSession]:
     """Retrieves all chat sessions created by a user, ordered newest-first."""
+    if current_user.id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied. Cannot retrieve sessions list for another user."
+        )
     return await ConversationService.get_user_sessions(db, user_id)
 
 
 @router.delete("/sessions/{session_id}", status_code=status.HTTP_200_OK, summary="Delete chat session")
 async def delete_chat_session(
     session_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ) -> dict:
     """Deletes a chat session and cascades deletes to all message logs."""
-    deleted = await ConversationService.delete_session(db, session_id)
-    if not deleted:
+    session = await ConversationService.get_session(db, session_id)
+    if not session:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Chat session {session_id} not found."
         )
+    if session.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied. Cannot delete another user's session."
+        )
+    await ConversationService.delete_session(db, session_id)
     return {"status": "success", "message": f"Chat session {session_id} deleted successfully."}
 
 
@@ -159,7 +186,8 @@ async def delete_chat_session(
 async def send_message(
     session_id: uuid.UUID,
     request: SendMessageRequest,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Sends a message to the chat assistant.
@@ -177,6 +205,13 @@ async def send_message(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Chat session {session_id} not found."
+        )
+        
+    # Verify session user matches current user
+    if session.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied. This session belongs to another user."
         )
 
     # 2. Get conversational context/history (up to limit)

@@ -28,6 +28,7 @@ from typing import Optional, Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy.orm import selectinload
 
 from app.core.config import settings
 from app.database.models.recommendation import UserRecommendationLog
@@ -307,7 +308,15 @@ class FeedAssemblerService:
         # ── Step 11: Deduplication ────────────────────────────────────────────
         if seen_ids is None:
             seen_ids = await self._get_recently_seen(user_id)
-        merged = [s for s in merged if s["story"].id not in seen_ids]
+        
+        # In a demo environment with limited stories, filtering out all seen stories
+        # can exhaust the feed. Fallback to only excluding clicked stories if needed.
+        temp_merged = [s for s in merged if s["story"].id not in seen_ids]
+        if len(temp_merged) >= limit:
+            merged = temp_merged
+        else:
+            clicked_ids = await self._get_recently_clicked(user_id)
+            merged = [s for s in merged if s["story"].id not in clicked_ids]
 
         # ── Paginate ──────────────────────────────────────────────────────────
         page = merged[:limit]
@@ -394,6 +403,7 @@ class FeedAssemblerService:
         if is_cold_start or preference_vector is None:
             stmt = (
                 select(Story)
+                .options(selectinload(Story.representative_article))
                 .where(Story.status == "ACTIVE")
                 .order_by(
                     (Story.importance_score * Story.trending_score).desc()
@@ -428,7 +438,11 @@ class FeedAssemblerService:
         if not story_ids:
             return [], {}
 
-        stmt = select(Story).where(Story.id.in_(story_ids), Story.status == "ACTIVE")
+        stmt = (
+            select(Story)
+            .options(selectinload(Story.representative_article))
+            .where(Story.id.in_(story_ids), Story.status == "ACTIVE")
+        )
         res = await self.db.execute(stmt)
         stories = list(res.scalars().all())
         return stories, similarity_map
@@ -444,10 +458,12 @@ class FeedAssemblerService:
 
         for item in bucket:
             story = item["story"]
-            # Get representative article details (we use story-level fields)
-            # Category from first article via relationship is too costly — use story topic
-            cat = getattr(story, "category", "unknown") or "unknown"
-            pub = str(story.representative_article_id or "unknown")
+            art = story.representative_article
+            cat = "unknown"
+            pub = "unknown"
+            if art:
+                cat = art.predicted_category or art.category or "unknown"
+                pub = art.publisher_id or "unknown"
 
             c_ok = category_count.get(cat, 0) < settings.DIVERSITY_MAX_PER_CATEGORY
             p_ok = publisher_count.get(pub, 0) < settings.DIVERSITY_MAX_PER_PUBLISHER
@@ -518,12 +534,27 @@ class FeedAssemblerService:
         res = await self.db.execute(stmt)
         return {row[0] for row in res.fetchall()}
 
+    async def _get_recently_clicked(self, user_id: uuid.UUID) -> set[uuid.UUID]:
+        """Returns story_ids clicked by user in the last 24 hours."""
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
+        stmt = (
+            select(UserRecommendationLog.story_id)
+            .where(
+                UserRecommendationLog.user_id == user_id,
+                UserRecommendationLog.created_at >= cutoff,
+                UserRecommendationLog.clicked == True,
+            )
+        )
+        res = await self.db.execute(stmt)
+        return {row[0] for row in res.fetchall()}
+
     async def _fetch_exploration_candidates(
         self, exclude_ids: set[uuid.UUID]
     ) -> list[dict]:
         """Fetches high-credibility, low-exposure, high-quality stories for exploration injection."""
         stmt = (
             select(Story)
+            .options(selectinload(Story.representative_article))
             .where(
                 Story.status == "ACTIVE",
                 Story.id.notin_(exclude_ids),

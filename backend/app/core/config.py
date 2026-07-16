@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     # App Settings
     LOG_LEVEL: str = Field(default="INFO")
     RANKING_ALGORITHM_VERSION: str = Field(default="v1")
+    DEMO_MODE: bool = Field(default=False)
 
     # PostgreSQL Configuration
     POSTGRES_HOST: str = Field(default="localhost")
@@ -99,6 +100,11 @@ class Settings(BaseSettings):
     ENABLE_RAG_CITATIONS: bool = Field(default=True)
     NO_CONTEXT_MESSAGE: str = Field(default="I do not have enough verified source information to answer this.")
     CONVERSATION_ENGINE_VERSION: str = Field(default="v1")
+
+    # JWT Configuration
+    JWT_SECRET: str = Field(default="dev_secret_key_123_change_in_production")
+    JWT_ALGORITHM: str = Field(default="HS256")
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(default=10080)  # 7 days
 
     # Pydantic Settings Configuration
     model_config = SettingsConfigDict(

@@ -1,0 +1,84 @@
+.skeleton-page-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  gap: 15px;
+  padding: 40px;
+}
+
+.skeleton-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--card-border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.skeleton-chat-container {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  padding: 10px;
+}
+
+.skeleton-bubble {
+  height: 60px;
+  border-radius: var(--radius-md);
+  background-color: var(--bg-tertiary);
+  max-width: 70%;
+}
+
+.skeleton-bubble.left {
+  align-self: flex-start;
+  width: 60%;
+  border-bottom-left-radius: 0;
+}
+
+.skeleton-bubble.right {
+  align-self: flex-end;
+  width: 50%;
+  border-bottom-right-radius: 0;
+}
+
+.skeleton-feed-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.skeleton-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.skeleton-line {
+  background-color: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+}
+
+.skeleton-line.title {
+  height: 24px;
+  width: 40%;
+}
+
+.skeleton-line.body {
+  height: 70px;
+  width: 100%;
+}
+
+.skeleton-line.footer {
+  height: 16px;
+  width: 25%;
+}

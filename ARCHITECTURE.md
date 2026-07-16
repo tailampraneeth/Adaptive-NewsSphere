@@ -1,7 +1,7 @@
 # Adaptive NewsSphere — System Architecture
 
-> **Current Release: v0.5.0 — Conversational AI**
-> Status: 5 of 6 milestones complete. Local-first. Docker-based. No LLMs. No paid APIs.
+> **Current Release: v0.7.0 — Production Demo & Frontend**
+> Status: 7 of 7 milestones complete. Local-first. Docker-based. No LLMs. No paid APIs.
 
 ---
 
@@ -24,7 +24,8 @@ Everything runs locally on a single developer machine with `docker compose up -d
 | 3 | Story Intelligence & Verification | ✅ Complete | v0.3.0 |
 | 4 | Recommendation Engine | ✅ Complete | v0.4.0 |
 | 5 | Conversational AI (Q&A) | ✅ Complete | v0.5.0 |
-| 6 | Frontend & Auth | 🔜 Planned | v0.6.0 |
+| 6 | Frontend & Auth | ✅ Complete | v0.6.0 |
+| 7 | Demo Mode & Verification | ✅ Complete | v0.7.0 |
 
 ---
 
@@ -395,6 +396,39 @@ The engine provides a conversational interface bound to individual stories to an
 ### Grounded Confidence Score
 Determined by context coverage, average similarity, retrieved article count, and citation count:
 $$C = 0.50 \cdot \text{Similarity} + 0.20 \cdot \min(1.0, \frac{N_{\text{articles}}}{3}) + 0.10 \cdot \min(1.0, \frac{C_{\text{chars}}}{6000}) + 0.20 \cdot \min(1.0, \frac{N_{\text{citations}}}{2})$$
+
+---
+
+## Milestone 6 — Frontend & Auth
+
+The frontend is a single-page React 19 application built with Vite, styled using modern Vanilla CSS with custom theme variables (HSL) and glassmorphic designs. It communicates with the backend via native `fetch` requests and SSE streaming, using React Context Providers for global states.
+
+### Core Frontend Subsystems
+- **Auth Provider (`AuthContext.jsx`):** Validates and stores user sessions. On startup, validates JWT credentials via `/api/v1/auth/me` to flush stale storage profiles. If unauthorized (401), clears credentials and redirects to login.
+- **Protected Layout:** Controls page routing. Prevents unauthenticated users from reaching the dashboard or story details.
+- **Tranquil Aesthetics:** Color palettes governed by `ThemeContext.jsx` implementing dark/light toggles and responding to browser color preferences.
+- **Offline Telemetry:** Tracks story dwell times, click behaviors, and session activity in local browser memory to ensure privacy while compiling data.
+
+---
+
+## Milestone 7 — Demo Mode & Verification
+
+To make the application fully self-contained and ready for demonstration, a **Demo Mode** was introduced. 
+
+### Life-Cycle Auto-Seeding & Database Purge
+- Controlled by the environment variable `DEMO_MODE=True`.
+- On application startup (FastAPI lifespan hook), the server automatically checks if the database contains any stories.
+- If the database is empty or unseeded:
+  1. Purges and drops all Postgres schemas and rebuilds them via Alembic.
+  2. Clears and resets all Qdrant vector database collections (`articles`, `stories`, `user_preferences`).
+  3. Seeds **300 articles and story clusters** to ensure a realistic simulation of an active news environment.
+  4. Registers two preset test users with passwords:
+     - **Cold User:** `cold@test.com` (Password: `password123`)
+     - **Warm User:** `warm@test.com` (Password: `password123`) with pre-computed preference vectors and history.
+
+### Feed Replenishment & Continuous Scroll Fallback
+- The Feed Assembler implements a fallback logic to guarantee continuous scroll even if a user exhausts recommendations.
+- On feed requests, if strict deduplication (excluding all recently recommended/seen stories) reduces the pool below the requested limit, the engine automatically relaxes constraints and falls back to only excluding stories actually clicked in the last 24 hours.
 
 ---
 

@@ -20,6 +20,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from app.core.config import settings
 from app.database.models.user import User
 from app.database.models.user_profile import UserProfile
+from app.utils.auth import hash_password
 
 
 async def seed_users():
@@ -28,6 +29,8 @@ async def seed_users():
 
     engine = create_async_engine(db_url, echo=False)
     async_session = async_sessionmaker(bind=engine, expire_on_commit=False)
+
+    default_hash = hash_password("password123")
 
     async with async_session() as session:
         # Check if cold user already exists
@@ -40,12 +43,14 @@ async def seed_users():
             cold_user = User(
                 id=uuid.uuid4(),
                 email=cold_email,
-                interaction_count=0
+                interaction_count=0,
+                hashed_password=default_hash
             )
             session.add(cold_user)
             print(f"[+] Created cold-start user: {cold_email}")
         else:
-            print(f"[*] Cold-start user {cold_email} already exists")
+            cold_user.hashed_password = default_hash
+            print(f"[*] Cold-start user {cold_email} already exists (password updated)")
 
         # Check if warm user already exists
         warm_email = "warm@test.com"
@@ -59,7 +64,8 @@ async def seed_users():
                 id=warm_id,
                 email=warm_email,
                 interaction_count=10,
-                preference_vector_id=str(warm_id)  # mock Qdrant reference
+                preference_vector_id=str(warm_id),  # mock Qdrant reference
+                hashed_password=default_hash
             )
             session.add(warm_user)
 
@@ -74,6 +80,7 @@ async def seed_users():
             session.add(profile)
             print(f"[+] Created warm user: {warm_email} with UserProfile muting 'Sports'")
         else:
+            warm_user.hashed_password = default_hash
             # Make sure profile exists
             prof_stmt = select(UserProfile).where(UserProfile.user_id == warm_user.id)
             prof_res = await session.execute(prof_stmt)
@@ -89,7 +96,7 @@ async def seed_users():
                 session.add(profile)
                 print(f"[+] Restored UserProfile for warm user {warm_email}")
             else:
-                print(f"[*] Warm user {warm_email} already exists with profile")
+                print(f"[*] Warm user {warm_email} already exists with profile (password updated)")
 
         await session.commit()
 

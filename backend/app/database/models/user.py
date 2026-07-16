@@ -43,6 +43,11 @@ class User(Base):
         server_default="0",
         nullable=False
     )
+    # Hashed password for authentication. Nullable to prevent breaking seeded dev users.
+    hashed_password: Mapped[Optional[str]] = mapped_column(
+        String(255),
+        nullable=True
+    )
     # Timestamp of the last feed request served to this user.
     last_feed_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True),

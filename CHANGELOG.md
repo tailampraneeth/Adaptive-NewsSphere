@@ -3,7 +3,28 @@
 All notable changes to this project are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). Versioning: [Semantic Versioning](https://semver.org/).
 
+## [0.7.0] — 2026-07-16 — Demo Mode & Verification
+
+### Added
+- **Demo Mode Lifespan Hook:**
+  - Handled application lifespan hooks to automatically drop/recreate database schemas, purge Qdrant vector databases, and seed 300 stories and 2 demo users if `DEMO_MODE=True` and the DB is unseeded.
+- **Continuous Feed Scroll Fallback:**
+  - Implemented a relaxed deduplication fallback. If filtering out all previously recommended stories drops the feed below the requested limit, the assembler falls back to only excluding stories actually clicked in the last 24 hours.
+
+## [0.6.0] — 2026-07-15 — Frontend & Auth
+
+### Added
+- **Single-Page React App:**
+  - Implemented full web interface using React 19 + Vite.
+  - Tranquil CSS design utilizing custom theme variables (HSL) and glassmorphism.
+- **Stale Token Check:**
+  - Updated `AuthContext.jsx` to call `/api/v1/auth/me` on startup to validate the stored token and flush stale localStorage profiles.
+- **User Dashboard & Claim Consensus Visualizer:**
+  - Visual components for feed list, detailed story timelines, multi-source claim agreements, disputed facts, and citation cards.
+  - Offline telemetry tracking local user dwell time privately.
+
 ## [0.5.0] — 2026-07-10 — Conversational RAG Q&A Engine
+
 
 ### Added
 - **Provider-Agnostic LLM Layer:**
