@@ -1,177 +1,226 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import useAuth from '../hooks/useAuth';
 import useNotification from '../hooks/useNotification';
 import feedService from '../services/feedService';
-import chatService from '../services/chatService';
-import FeedList from '../components/FeedList';
-import RecommendationPanel from '../components/RecommendationPanel';
-import ChatDrawer from '../components/ChatDrawer';
+import StoryCard from '../components/StoryCard';
+import LoadingSkeleton from '../components/LoadingSkeleton';
 import './Dashboard.css';
 
 export const Dashboard = () => {
   const { user } = useAuth();
   const { showNotification } = useNotification();
+  const navigate = useNavigate();
 
-  const [feed, setFeed] = useState(null);
-  const [activeSessions, setActiveSessions] = useState([]);
-  const [recStats, setRecStats] = useState(null);
-  const [userStats, setUserStats] = useState(null);
+  const [stories, setStories] = useState([]);
+  const [cursor, setCursor] = useState('');
   const [loading, setLoading] = useState(true);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [selectedStoryId, setSelectedStoryId] = useState(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  
+  // Daily Brief States
+  const [showBrief, setShowBrief] = useState(false);
+  const [briefStories, setBriefStories] = useState([]);
 
-  const loadDashboardData = async () => {
-    if (!user) return;
+  // Check connectivity
+  useEffect(() => {
+    const goOnline = () => {
+      setIsOffline(false);
+      showNotification('You are back online.', 'success');
+      loadInitialFeed();
+    };
+    const goOffline = () => {
+      setIsOffline(true);
+      showNotification('You are offline. Showing cached content.', 'warning');
+      loadCachedFeed();
+    };
+
+    window.addEventListener('online', goOnline);
+    window.addEventListener('offline', goOffline);
+    return () => {
+      window.removeEventListener('online', goOnline);
+      window.removeEventListener('offline', goOffline);
+    };
+  }, [showNotification]);
+
+  const loadCachedFeed = () => {
+    const cached = localStorage.getItem('heimdall_cached_feed');
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        setStories(parsed.results || []);
+        setCursor(parsed.next_cursor || '');
+        // Load brief stories from cache if possible
+        setBriefStories(parsed.results?.slice(0, 5) || []);
+        checkDailyBriefWindow(parsed.results?.slice(0, 5) || []);
+      } catch (_) {
+        setStories([]);
+      }
+    }
+    setLoading(false);
+  };
+
+  const checkDailyBriefWindow = (feedStories) => {
+    if (!feedStories || feedStories.length === 0) return;
+
+    // Check if dismissed today
+    const today = new Date().toDateString();
+    const dismissedDate = localStorage.getItem('heimdall_brief_dismissed_date');
+    if (dismissedDate === today) {
+      setShowBrief(false);
+      return;
+    }
+
+    // Check hourly window
+    const hour = new Date().getHours();
+    const briefPref = user?.brief_time || 'morning';
+    
+    let isWindow = false;
+    if (briefPref === 'morning' && hour >= 6 && hour < 12) isWindow = true;
+    else if (briefPref === 'afternoon' && hour >= 12 && hour < 18) isWindow = true;
+    else if (briefPref === 'evening' && hour >= 18 && hour < 24) isWindow = true;
+
+    if (isWindow) {
+      setBriefStories(feedStories.slice(0, 5));
+      setShowBrief(true);
+    } else {
+      setShowBrief(false);
+    }
+  };
+
+  const loadInitialFeed = async () => {
     setLoading(true);
     try {
-      // 1. Load feed
-      const feedData = await feedService.getPersonalizedFeed(user.id);
-      setFeed(feedData);
-
-      // 2. Load active chat sessions
-      const sessions = await chatService.listSessions(user.id);
-      setActiveSessions(sessions);
-
-      // 3. Load recommendation stats
-      const stats = await feedService.getRecommendationStats();
-      setRecStats(stats);
-
-      // 4. Load user profile health
-      const uStats = await feedService.getProfileHealth(user.id);
-      setUserStats(uStats);
+      if (!navigator.onLine) {
+        loadCachedFeed();
+        return;
+      }
+      const data = await feedService.getPersonalizedFeed('', 20);
+      setStories(data.results || []);
+      setCursor(data.next_cursor || '');
+      
+      // Store in cache for offline
+      localStorage.setItem('heimdall_cached_feed', JSON.stringify(data));
+      
+      checkDailyBriefWindow(data.results || []);
     } catch (err) {
-      showNotification(err.message || 'Error resolving dashboard data.', 'error');
+      showNotification(err.message || 'Failed to load feed.', 'error');
+      loadCachedFeed(); // Fallback to cache on api fail
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadDashboardData();
+    if (user) {
+      loadInitialFeed();
+    }
   }, [user]);
 
-  const handleInteraction = async (storyId, type) => {
-    if (!user) return;
+  const loadMoreStories = async () => {
+    if (loadingMore || !cursor) return;
+    setLoadingMore(true);
     try {
-      await feedService.recordInteraction(user.id, storyId, type);
-    } catch (_) {
-      // Fail silently for telemetry record
+      const data = await feedService.getPersonalizedFeed(cursor, 15);
+      setStories(prev => [...prev, ...(data.results || [])]);
+      setCursor(data.next_cursor || '');
+    } catch (err) {
+      showNotification(err.message || 'Failed to load more stories.', 'error');
+    } finally {
+      setLoadingMore(false);
     }
   };
 
-  const handleOpenChat = (storyId) => {
-    setSelectedStoryId(storyId);
-    setDrawerOpen(true);
+  const handleInteraction = async (storyId, type) => {
+    try {
+      await feedService.recordInteraction(storyId, type);
+    } catch (_) {
+      // Telemetry fail silently
+    }
   };
 
-  // Compile aggregate metrics
-  const totalStories = feed?.stories?.length || 0;
-  const verifiedStoriesCount = feed?.stories?.filter(s => s.verification_score >= 0.70).length || 0;
-
-  // Extract unique topics from feed stories
-  const trendingTopics = [];
-  if (feed?.stories) {
-    const topicSet = new Set();
-    feed.stories.forEach(s => {
-      // Pull representative keywords or mock topics
-      if (s.recommendation_metadata?.matched_categories) {
-        s.recommendation_metadata.matched_categories.forEach(c => topicSet.add(c));
-      }
-    });
-    topicSet.forEach(t => trendingTopics.push(t));
-  }
+  const dismissBrief = () => {
+    const today = new Date().toDateString();
+    localStorage.setItem('heimdall_brief_dismissed_date', today);
+    setShowBrief(false);
+  };
 
   return (
     <div className="dashboard-container">
-      <div className="dashboard-main-content">
-        <header className="dashboard-welcome-header">
-          <h1>Welcome to Your NewsSphere</h1>
-          <p>Verified, context-bound story intelligence platform.</p>
+      {isOffline && (
+        <div className="offline-banner animate-slide-down">
+          <span>Offline Mode: displaying cached feed.</span>
+        </div>
+      )}
+
+      {/* Daily Briefing Banner (Polish #4) */}
+      {showBrief && briefStories.length > 0 && (
+        <section className="daily-brief-section animate-slide-up">
+          <div className="brief-card">
+            <div className="brief-card-header">
+              <div className="brief-title-row">
+                <span className="brief-badge">⚡ Daily Brief</span>
+                <h3>Your Watchful Briefing</h3>
+              </div>
+              <button className="dismiss-brief-btn" onClick={dismissBrief} aria-label="Dismiss Briefing">
+                ✕
+              </button>
+            </div>
+            <p className="brief-desc">Here are today's top 5 must-read stories tailored for you:</p>
+            <div className="brief-stories-list">
+              {briefStories.map((s, idx) => (
+                <div key={s.story_id} className="brief-story-item" onClick={() => navigate(`/story/${s.story_id}`)}>
+                  <span className="brief-number">{idx + 1}</span>
+                  <span className="brief-story-title">{s.title}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      <section className="feed-section">
+        <header className="feed-header-row">
+          <h2>Personalized Intell Feed</h2>
+          <button className="refresh-feed-btn" onClick={loadInitialFeed} disabled={loading} aria-label="Refresh Feed">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+            </svg>
+          </button>
         </header>
 
-        <section className="feed-section">
-          <div className="feed-header-row">
-            <h2>Personalized Story Feed</h2>
-            <span className="feed-strategy-tag">
-              Strategy: {feed?.strategy ? feed.strategy.replace('_', ' ') : 'loading'}
-            </span>
+        {loading ? (
+          <LoadingSkeleton type="feed" />
+        ) : stories.length === 0 ? (
+          <div className="feed-empty-state animate-slide-up">
+            <div className="empty-icon">🦉</div>
+            <h3>Nothing reported yet</h3>
+            <p>Your RSS watchtower is scanning. New story clusters will appear soon.</p>
           </div>
-          <FeedList
-            stories={feed?.stories}
-            loading={loading}
-            onInteract={handleInteraction}
-          />
-        </section>
-      </div>
-
-      <div className="dashboard-sidebar-panels">
-        {/* Recommendation Statistics Panel */}
-        <RecommendationPanel stats={recStats} userStats={userStats} />
-
-        {/* Stories Statistics */}
-        <section className="dash-panel-card">
-          <h3>Sphere Summary</h3>
-          <div className="summary-numbers">
-            <div className="number-item">
-              <span className="number-value">{totalStories}</span>
-              <span className="number-label">Stories Today</span>
-            </div>
-            <div className="number-item">
-              <span className="number-value">{verifiedStoriesCount}</span>
-              <span className="number-label">Verified Stories</span>
-            </div>
+        ) : (
+          <div className="feed-list-container">
+            {stories.map((story) => (
+              <StoryCard
+                key={story.story_id}
+                story={story}
+                onInteract={handleInteraction}
+              />
+            ))}
           </div>
-        </section>
+        )}
 
-        {/* Trending Topics Panel */}
-        <section className="dash-panel-card">
-          <h3>Trending Topics</h3>
-          <div className="topics-pill-box">
-            {trendingTopics.length === 0 ? (
-              <span className="no-topics">Ingesting topics...</span>
-            ) : (
-              trendingTopics.map((topic, idx) => (
-                <span key={idx} className="topic-pill-tag">
-                  #{topic}
-                </span>
-              ))
-            )}
+        {cursor && !loading && (
+          <div className="load-more-container">
+            <button
+              className="load-more-btn"
+              onClick={loadMoreStories}
+              disabled={loadingMore}
+            >
+              {loadingMore ? 'Resolving new streams...' : 'Load Older intelligence'}
+            </button>
           </div>
-        </section>
-
-        {/* Active Conversations Panel */}
-        <section className="dash-panel-card active-sessions-panel">
-          <h3>Active Conversations</h3>
-          <div className="sessions-list">
-            {activeSessions.length === 0 ? (
-              <p className="no-sessions">No active conversations threads.</p>
-            ) : (
-              activeSessions.map((session) => (
-                <div key={session.id} className="session-link-item">
-                  <div className="session-info">
-                    <span className="session-title-lbl">{session.title || 'Conversational Session'}</span>
-                    <span className="session-msgs-count">{session.message_count || 0} messages</span>
-                  </div>
-                  <button 
-                    className="session-resume-btn"
-                    onClick={() => handleOpenChat(session.story_id)}
-                  >
-                    Resume
-                  </button>
-                </div>
-              ))
-            )}
-          </div>
-        </section>
-      </div>
-
-      {selectedStoryId && (
-        <ChatDrawer
-          storyId={selectedStoryId}
-          isOpen={drawerOpen}
-          onClose={() => setDrawerOpen(false)}
-        />
-      )}
+        )}
+      </section>
     </div>
   );
 };

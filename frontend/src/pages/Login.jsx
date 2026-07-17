@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import useAuth from '../hooks/useAuth';
 import useNotification from '../hooks/useNotification';
-import analyticsService from '../services/analyticsService';
 import './AuthPage.css';
 
 export const Login = () => {
@@ -24,17 +23,20 @@ export const Login = () => {
 
     setLoading(true);
     try {
-      await login(email, password);
+      const loggedUser = await login(email, password);
       showNotification('Welcome back! Logged in successfully.', 'success');
-      analyticsService.recordLogin();
       
       if (rememberMe) {
-        localStorage.setItem('ans_remember_email', email);
+        localStorage.setItem('heimdall_remember_email', email);
       } else {
-        localStorage.removeItem('ans_remember_email');
+        localStorage.removeItem('heimdall_remember_email');
       }
 
-      navigate('/dashboard');
+      if (loggedUser && !loggedUser.onboarding_complete) {
+        navigate('/onboard');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err) {
       showNotification(err.message || 'Login failed. Verify credentials.', 'error');
     } finally {
@@ -44,8 +46,8 @@ export const Login = () => {
 
   return (
     <div className="auth-form-card animate-slide-up">
-      <h2>Log In</h2>
-      <p className="auth-subtitle">Welcome back to Adaptive NewsSphere</p>
+      <h2>Access Watchtower</h2>
+      <p className="auth-subtitle">Real-time, verified world news at your fingertips.</p>
       
       <form onSubmit={handleSubmit} className="auth-form-body">
         <div className="form-group">
@@ -83,6 +85,9 @@ export const Login = () => {
             />
             <span className="checkbox-label">Remember Me</span>
           </label>
+          <Link to="/forgot-password" style={{ color: 'var(--primary)', fontWeight: '600', textDecoration: 'none' }}>
+            Forgot Password?
+          </Link>
         </div>
 
         <button type="submit" className="auth-submit-btn" disabled={loading}>

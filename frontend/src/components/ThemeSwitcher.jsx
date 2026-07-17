@@ -1,6 +1,5 @@
 import React from 'react';
 import useTheme from '../hooks/useTheme';
-import analyticsService from '../services/analyticsService';
 import './ThemeSwitcher.css';
 
 export const ThemeSwitcher = () => {
@@ -8,7 +7,6 @@ export const ThemeSwitcher = () => {
 
   const handleToggle = (mode) => {
     toggleTheme(mode);
-    analyticsService.recordThemeUsage(mode);
   };
 
   return (

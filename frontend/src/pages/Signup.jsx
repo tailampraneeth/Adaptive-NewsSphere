@@ -34,11 +34,11 @@ export const Signup = () => {
     setLoading(true);
     try {
       await signup(email, password);
-      showNotification('Registration successful! Logging in automatically...', 'success');
+      showNotification('Registration successful! Logging in...', 'success');
       
       // Auto login user
-      await login(email, password);
-      navigate('/dashboard');
+      const loggedUser = await login(email, password);
+      navigate('/onboard');
     } catch (err) {
       showNotification(err.message || 'Registration failed. Try again.', 'error');
     } finally {
@@ -48,8 +48,8 @@ export const Signup = () => {
 
   return (
     <div className="auth-form-card animate-slide-up">
-      <h2>Create Account</h2>
-      <p className="auth-subtitle">Register to customize your NewsSphere feed</p>
+      <h2>Join Watchtower</h2>
+      <p className="auth-subtitle">Register to begin scanning tailored world news.</p>
 
       <form onSubmit={handleSubmit} className="auth-form-body">
         <div className="form-group">

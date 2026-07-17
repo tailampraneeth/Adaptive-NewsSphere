@@ -2,10 +2,15 @@ import { request } from './api';
 
 export const storyService = {
   async getStoryDetails(storyId) {
-    const data = await request(`/api/v1/stories/${storyId}`, {
+    return await request(`/api/v1/stories/${storyId}`, {
       method: 'GET',
     });
-    return data;
+  },
+
+  async getRelatedStories(storyId) {
+    return await request(`/api/v1/stories/${storyId}/related`, {
+      method: 'GET',
+    });
   }
 };
 export default storyService;

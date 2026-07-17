@@ -18,10 +18,9 @@ export const authService = {
     if (response && response.access_token) {
       localStorage.setItem('token', response.access_token);
       
-      // Fetch user profile info
       const user = await this.getMe();
       localStorage.setItem('user', JSON.stringify(user));
-      return { user, token: response.access_token };
+      return user;
     }
     
     throw new Error('Authentication failed: missing access token.');
@@ -37,6 +36,47 @@ export const authService = {
       method: 'GET',
     });
     return user;
+  },
+
+  async onboard(payload) {
+    const user = await request('/api/v1/auth/onboard', {
+      method: 'POST',
+      body: payload
+    });
+    localStorage.setItem('user', JSON.stringify(user));
+    return user;
+  },
+
+  async updateProfile(payload) {
+    const user = await request('/api/v1/auth/me', {
+      method: 'PATCH',
+      body: payload
+    });
+    localStorage.setItem('user', JSON.stringify(user));
+    return user;
+  },
+
+  async deleteAccount() {
+    await request('/api/v1/auth/account', {
+      method: 'DELETE'
+    });
+    this.logout();
+  },
+
+  async forgotPassword(email) {
+    const data = await request('/api/v1/auth/forgot-password', {
+      method: 'POST',
+      body: { email },
+    });
+    return data;
+  },
+
+  async resetPassword(token, newPassword) {
+    const data = await request('/api/v1/auth/reset-password', {
+      method: 'POST',
+      body: { token, new_password: newPassword },
+    });
+    return data;
   },
 
   getCurrentUser() {

@@ -1,15 +1,11 @@
 """
-Article SQLAlchemy model.
+Article SQLAlchemy model for Heimdall Consumer Edition.
 
 An Article represents a single news piece ingested from an RSS feed.
-Each article is deduped (content_hash, article_hash), NLP-enriched
-(keywords, named_entities, topics), semantically embedded (qdrant_point_id),
-and then clustered into a Story.
-
-New in M2 Final Review:
-- `predicted_category`: auto-assigned category from CategoryClassifierService
-- `category_confidence`: classifier confidence score (0.0–1.0)
-- `duplicate_type`: classification of the duplicate relationship if applicable
+Compared to the enterprise version:
+  - Removed: qdrant_point_id, duplicate_type, quality_score, word_count, character_count
+  - Added: canonical_url, region
+  - Removed relationships: interactions, duplicates_as_original, duplicates_as_duplicate
 """
 import uuid
 from datetime import datetime
@@ -20,25 +16,6 @@ from app.database.models.base import Base
 
 
 class Article(Base):
-    """
-    Represents a single ingested news article.
-
-    Deduplication strategy:
-      1. source_url unique constraint (same URL = exact same article)
-      2. article_hash (SHA-256 of title + cleaned body) — catches republished content
-      3. content_hash (SHA-256 of cleaned body) — catches re-titled copies
-
-    NLP enrichment (populated by enrich_articles.py):
-      - keywords: KeyBERT top-5 keyphrases
-      - named_entities: spaCy PERSON / ORG / GPE entities
-      - topics: frequency-based noun-chunk topics
-
-    Category classification (populated by classify_categories.py):
-      - category: original category from RSS feed (if provided)
-      - predicted_category: auto-assigned via CategoryClassifierService
-      - category_confidence: classifier confidence (0.0–1.0)
-    """
-
     __tablename__ = "articles"
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -73,6 +50,12 @@ class Article(Base):
         nullable=False,
         index=True
     )
+    # Resolved, validated canonical URL without redirects
+    canonical_url: Mapped[str] = mapped_column(
+        String(512),
+        nullable=False,
+        index=True
+    )
     published_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
@@ -93,12 +76,12 @@ class Article(Base):
         String(100),
         nullable=True
     )
-    # Auto-assigned category from CategoryClassifierService (embedding + keyword fallback)
+    # Auto-assigned category from CategoryClassifierService (keyword-only)
     predicted_category: Mapped[Optional[str]] = mapped_column(
         String(100),
         nullable=True
     )
-    # Classifier confidence score (0.0 = keyword fallback, 1.0 = high embedding confidence)
+    # Classifier confidence score (0.0 = keyword fallback)
     category_confidence: Mapped[Optional[float]] = mapped_column(
         Float,
         nullable=True
@@ -111,6 +94,10 @@ class Article(Base):
         JSON,
         nullable=True
     )  # JSONB array representation on PostgreSQL
+    region: Mapped[Optional[str]] = mapped_column(
+        String(100),
+        nullable=True
+    )
 
     # ── Hash Values for Deduplication ────────────────────────────────────────
     content_hash: Mapped[str] = mapped_column(
@@ -124,22 +111,7 @@ class Article(Base):
         nullable=False
     )  # SHA-256 of title + cleaned body content
 
-    # Classification of duplicate relationship (populated by ClusteringService)
-    # Values: EXACT_DUPLICATE, SEMANTIC_DUPLICATE, UPDATED_ARTICLE, CORRECTED_ARTICLE
-    duplicate_type: Mapped[Optional[str]] = mapped_column(
-        String(50),
-        nullable=True
-    )
-
-    # Quality score tracking for ranking and recommendations
-    quality_score: Mapped[float] = mapped_column(
-        Float,
-        default=1.00,
-        nullable=False,
-        server_default='1.00'
-    )
-
-    # ── NLP & Qdrant Fields ──────────────────────────────────────────────────
+    # ── NLP & Metadata ────────────────────────────────────────────────────────
     subtitle: Mapped[Optional[str]] = mapped_column(
         String(512),
         nullable=True
@@ -148,22 +120,10 @@ class Article(Base):
         String(50),
         nullable=True
     )
+    # Estimated reading time in minutes, computed once at ingestion
     reading_time: Mapped[Optional[int]] = mapped_column(
         Integer,
         nullable=True
-    )
-    word_count: Mapped[Optional[int]] = mapped_column(
-        Integer,
-        nullable=True
-    )
-    character_count: Mapped[Optional[int]] = mapped_column(
-        Integer,
-        nullable=True
-    )
-    qdrant_point_id: Mapped[Optional[str]] = mapped_column(
-        String(36),
-        nullable=True,
-        index=True
     )
     keywords: Mapped[Optional[List[str]]] = mapped_column(
         JSON,
@@ -186,16 +146,3 @@ class Article(Base):
     # Relationships
     story = relationship("Story", back_populates="articles", foreign_keys="[Article.story_id]")
     publisher = relationship("Publisher", back_populates="articles")
-    interactions = relationship("UserInteraction", back_populates="article", cascade="all, delete-orphan")
-    duplicates_as_original = relationship(
-        "ArticleDuplicate",
-        foreign_keys="ArticleDuplicate.original_article_id",
-        back_populates="original_article",
-        cascade="all, delete-orphan"
-    )
-    duplicates_as_duplicate = relationship(
-        "ArticleDuplicate",
-        foreign_keys="ArticleDuplicate.duplicate_article_id",
-        back_populates="duplicate_article",
-        cascade="all, delete-orphan"
-    )

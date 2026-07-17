@@ -1,0 +1,16 @@
+name: Heimdall AI Summarization
+
+on:
+  schedule:
+    - cron: '10,40 * * * *'  # Run at 10 and 40 past each hour (10 min after ingestion)
+  workflow_dispatch:        # Enable manual runs
+
+jobs:
+  summarize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger AI Summarization Webhook
+        run: |
+          curl -X POST "${{ secrets.HEIMDALL_API_URL }}/api/v1/internal/summarize" \
+            -H "X-Ingest-Secret: ${{ secrets.INGEST_SECRET }}" \
+            --fail --silent

@@ -6,7 +6,7 @@ export const LoadingSkeleton = ({ type = 'feed' }) => {
     return (
       <div className="skeleton-page-container">
         <div className="skeleton-spinner"></div>
-        <p className="pulse">Loading NewsSphere...</p>
+        <p className="pulse">Loading Heimdall...</p>
       </div>
     );
   }

@@ -7,58 +7,58 @@ export const StoryCard = ({ story, onInteract }) => {
 
   const handleCardClick = () => {
     if (onInteract) {
-      onInteract(story.id, 'click');
+      onInteract(story.story_id, 'click');
     }
-    navigate(`/story/${story.id}`);
-  };
-
-  const getScoreClass = (score) => {
-    if (score >= 0.70) return 'score-high';
-    if (score >= 0.45) return 'score-medium';
-    return 'score-low';
+    navigate(`/story/${story.story_id}`);
   };
 
   return (
-    <article className="story-card animate-slide-up" onClick={handleCardClick} tabIndex="0" role="button" aria-label={`Read story: ${story.title}`}>
-      <header className="story-card-header">
-        <div className="badge-row">
-          {story.verification_score !== undefined && (
-            <span className={`badge ${getScoreClass(story.verification_score)}`}>
-              Verified {Math.round(story.verification_score * 100)}%
-            </span>
-          )}
-          {story.has_conflicts && (
-            <span className="badge conflict-badge">Disputed Views</span>
-          )}
-          {story.trending_score > 0.6 && (
-            <span className="badge trending-badge">Trending</span>
-          )}
+    <article
+      className="story-card animate-slide-up"
+      onClick={handleCardClick}
+      tabIndex="0"
+      role="button"
+      aria-label={`Read story: ${story.title}`}
+    >
+      {story.image_url && (
+        <div className="story-card-image-wrapper">
+          <img src={story.image_url} alt="" className="story-card-image" loading="lazy" />
         </div>
-        <h3 className="story-title">{story.title}</h3>
-      </header>
+      )}
 
-      <div className="story-summary-preview">
-        <p>{story.summary ? story.summary.substring(0, 180) + '...' : 'No summary generated yet.'}</p>
+      <div className="story-card-content">
+        <header className="story-card-header">
+          <div className="badge-row">
+            <span className={`badge badge-color-${story.verification_color}`}>
+              <span className="badge-icon">{story.verification_icon}</span>
+              {story.verification_label}
+            </span>
+            <span className="category-label-tag">{story.predicted_category}</span>
+          </div>
+          <h3 className="story-title">{story.title}</h3>
+        </header>
+
+        <p className="story-summary-preview">
+          {story.summary ? (story.summary.length > 140 ? story.summary.substring(0, 140) + '...' : story.summary) : 'No summary available.'}
+        </p>
+
+        <footer className="story-card-footer">
+          <div className="source-stats">
+            <span className="stat-item">
+              <strong>{story.article_count}</strong> {story.article_count === 1 ? 'article' : 'articles'}
+            </span>
+            <span className="stat-separator">•</span>
+            <span className="stat-item">
+              <strong>{story.publisher_diversity}</strong> {story.publisher_diversity === 1 ? 'source' : 'sources'}
+            </span>
+          </div>
+          {story.explanation && (
+            <div className="story-recommendation-explanation">
+              {story.explanation}
+            </div>
+          )}
+        </footer>
       </div>
-
-      <footer className="story-card-footer">
-        <div className="source-stats">
-          <span className="stat-item">
-            <strong>{story.article_count}</strong> articles
-          </span>
-          <span className="stat-separator">•</span>
-          <span className="stat-item">
-            <strong>{story.publisher_diversity}</strong> sources
-          </span>
-        </div>
-        <div className="story-meta-indicators">
-          {story.credibility_score !== undefined && (
-            <span className="credibility-indicator" title="Source Credibility Rating">
-              Trust Score: <strong>{Math.round(story.credibility_score * 100)}%</strong>
-            </span>
-          )}
-        </div>
-      </footer>
     </article>
   );
 };
