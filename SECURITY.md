@@ -13,6 +13,6 @@ We actively update and provide security patches for the following versions of Ad
 
 If you discover a security vulnerability within this project, please do **NOT** open a public issue. Instead, report it privately by contacting the maintainer:
 
-*   Email: `tailampraneeth@example.com`
+*   Email: `tailampraneeth@gmail.com`
 
 Please include details of the vulnerability, steps to reproduce, and any potential mitigation strategies. We aim to respond within 48 hours and coordinate a fix release promptly.
