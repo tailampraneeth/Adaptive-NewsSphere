@@ -7,8 +7,8 @@ uvicorn[standard]==0.30.1
 sqlalchemy[asyncio]==2.0.31
 asyncpg==0.31.0
 alembic==1.13.1
-pydantic-settings==2.3.3
-pydantic[email]==2.7.4
+pydantic[email]==2.11.7
+pydantic-settings==2.10.1
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 feedparser==6.0.11
