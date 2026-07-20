@@ -1,7 +1,7 @@
 /**
  * Base Fetch API Wrapper for Adaptive NewsSphere API
  */
-const BASE_URL = ''; // Proxied via Vite config to localhost:8000 during development
+const BASE_URL = import.meta.env.VITE_API_URL || '';
 
 export const request = async (path, options = {}) => {
   const url = `${BASE_URL}${path}`;
