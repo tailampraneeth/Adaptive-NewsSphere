@@ -5,10 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from app.database.models.user import User
-from app.database.models.user_profile import UserProfile
 from app.utils.auth import hash_password, verify_password, decode_access_token
-
-
 from app.main import app
 from app.database.connection import get_db
 
@@ -43,7 +40,7 @@ async def test_password_hashing_utilities():
 
 @pytest.mark.asyncio
 async def test_signup_endpoint(client: AsyncClient, db_session: AsyncSession):
-    """Verify signup endpoint registers users and sets user profile defaults."""
+    """Verify signup endpoint registers users and sets onboarding properties."""
     email = "new_user@test.com"
     pwd = "securepassword123"
     
@@ -56,6 +53,7 @@ async def test_signup_endpoint(client: AsyncClient, db_session: AsyncSession):
     res_json = response.json()
     assert res_json["email"] == email
     assert "id" in res_json
+    assert res_json["onboarding_complete"] is False
     
     # Assert database records
     stmt = select(User).where(User.email == email)
@@ -63,17 +61,11 @@ async def test_signup_endpoint(client: AsyncClient, db_session: AsyncSession):
     user = result.scalar_one_or_none()
     assert user is not None
     assert verify_password(pwd, user.hashed_password) is True
-    
-    # Assert user profile exists
-    profile_stmt = select(UserProfile).where(UserProfile.user_id == user.id)
-    profile_result = await db_session.execute(profile_stmt)
-    profile = profile_result.scalar_one_or_none()
-    assert profile is not None
 
 
 @pytest.mark.asyncio
-async def test_signup_duplicate_raises_400(client: AsyncClient):
-    """Verify signup with an already registered email throws a 400."""
+async def test_signup_duplicate_raises_409(client: AsyncClient):
+    """Verify signup with an already registered email throws a 409 Conflict."""
     email = "dup@test.com"
     
     # Initial signup
@@ -88,8 +80,8 @@ async def test_signup_duplicate_raises_400(client: AsyncClient):
         json={"email": email, "password": "password123"}
     )
     
-    assert response.status_code == 400
-    assert "already registered" in response.json()["detail"]
+    assert response.status_code == 409
+    assert "already registered" in response.json()["detail"].lower()
 
 
 @pytest.mark.asyncio
@@ -163,9 +155,69 @@ async def test_get_me_success(client: AsyncClient):
     )
     token = login_res.json()["access_token"]
     
-    # Call get_me with auth headers
     headers = {"Authorization": f"Bearer {token}"}
     response = await client.get("/api/v1/auth/me", headers=headers)
     
     assert response.status_code == 200
     assert response.json()["email"] == email
+
+
+@pytest.mark.asyncio
+async def test_onboarding_success(client: AsyncClient):
+    email = "onboard_user@test.com"
+    pwd = "password123"
+    
+    await client.post(
+        "/api/v1/auth/signup",
+        json={"email": email, "password": pwd}
+    )
+    
+    login_res = await client.post(
+        "/api/v1/auth/login",
+        json={"email": email, "password": pwd}
+    )
+    token = login_res.json()["access_token"]
+    
+    headers = {"Authorization": f"Bearer {token}"}
+    onboard_payload = {
+        "name": "Heimdall User",
+        "country": "India",
+        "preferred_categories": ["Technology", "Science"],
+        "preferred_publishers": ["bbc"],
+        "theme": "dark",
+        "brief_time": "morning"
+    }
+    
+    response = await client.post("/api/v1/auth/onboard", json=onboard_payload, headers=headers)
+    assert response.status_code == 200
+    res_json = response.json()
+    assert res_json["onboarding_complete"] is True
+    assert res_json["name"] == "Heimdall User"
+    assert res_json["country"] == "India"
+    assert "Technology" in res_json["preferred_categories"]
+
+
+@pytest.mark.asyncio
+async def test_delete_account_success(client: AsyncClient, db_session: AsyncSession):
+    email = "delete_user@test.com"
+    pwd = "password123"
+    
+    await client.post(
+        "/api/v1/auth/signup",
+        json={"email": email, "password": pwd}
+    )
+    
+    login_res = await client.post(
+        "/api/v1/auth/login",
+        json={"email": email, "password": pwd}
+    )
+    token = login_res.json()["access_token"]
+    
+    headers = {"Authorization": f"Bearer {token}"}
+    response = await client.delete("/api/v1/auth/account", headers=headers)
+    assert response.status_code == 204
+    
+    # Assert database user is gone
+    stmt = select(User).where(User.email == email)
+    result = await db_session.execute(stmt)
+    assert result.scalar_one_or_none() is None

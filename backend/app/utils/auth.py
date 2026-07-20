@@ -1,9 +1,8 @@
-import jwt
+from jose import jwt, JWTError
 import bcrypt
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 from app.core.config import settings
-
 
 def hash_password(password: str) -> str:
     """Hashes a plain text password using bcrypt."""
@@ -42,5 +41,5 @@ def decode_access_token(token: str) -> Optional[dict]:
     try:
         payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
         return payload
-    except jwt.PyJWTError:
+    except JWTError:
         return None

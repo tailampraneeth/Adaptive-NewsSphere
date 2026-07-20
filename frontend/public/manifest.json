@@ -1,0 +1,16 @@
+{
+  "short_name": "Heimdall",
+  "name": "Heimdall News Intelligence Watchtower",
+  "icons": [
+    {
+      "src": "/logo.jpg",
+      "type": "image/jpeg",
+      "sizes": "1024x1024"
+    }
+  ],
+  "start_url": "/index.html",
+  "background_color": "#0A0A14",
+  "theme_color": "#4F8EF7",
+  "display": "standalone",
+  "orientation": "portrait"
+}

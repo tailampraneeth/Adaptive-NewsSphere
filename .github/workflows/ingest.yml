@@ -1,0 +1,16 @@
+name: Heimdall News Ingestion
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'  # Run every 30 minutes
+  workflow_dispatch:        # Enable manual runs
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger RSS Ingestion Webhook
+        run: |
+          curl -X POST "${{ secrets.HEIMDALL_API_URL }}/api/v1/internal/ingest" \
+            -H "X-Ingest-Secret: ${{ secrets.INGEST_SECRET }}" \
+            --fail --silent

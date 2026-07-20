@@ -3,6 +3,28 @@
 All notable changes to this project are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). Versioning: [Semantic Versioning](https://semver.org/).
 
+## [1.0.0] — 2026-07-17 — Heimdall Final Release (Consumer Edition)
+
+### Added
+- **Lightweight Architecture Migration:**
+  - Re-architected system to run entirely on free-tier services. Pruned heavyweight dependencies: dropped Qdrant Vector Store, Redis Cache, PyTorch, Transformers, KeyBERT, and sentence-transformers.
+  - Implemented CPU-friendly deterministic Jaccard token-overlap calculations ($\ge 0.40$) for clustering and verification.
+  - Integrated PostgreSQL Full-Text Search (FTS) with plainto_tsquery and GIN index scoring fallback for development SQLite.
+- **SQL Recommender & Feedback Loops:**
+  - Implemented SQL-based candidate scoring factoring preferred categories, favored publishers, and region contexts.
+  - Added reading completion feedback loop (Polish #3): avg reading depth $\ge 70\%$ applies a $+0.10$ interest match boost; avg depth $\le 20\%$ applies a $-0.10$ abandonment penalty.
+- **React 19 PWA Redesign:**
+  - Created a dark space Norse watchtower themed interface.
+  - Added Bottom Navigation, TopBar, and responsive FeedCards.
+  - Integrated PWA manifest and service worker caching the last 20 viewed story details offline.
+- **Quick Facts & Onboarding:**
+  - Added Quick Facts panels to story details pages (Published, Last Updated, Sources, Reading Time, Region Context).
+  - Built a 3-step onboarding flow (< 60 seconds) establishing user name, region context, and interest tags.
+  - Designed a Daily Briefing banner dashboard displaying the top 5 ranked story updates inside morning/afternoon/evening preference slots.
+- **Secure Password Recovery:**
+  - Added forgot-password and reset-password flows with cryptographic token hashing, rate-limiting, anti-user enumeration, SMTP dispatch, and console logging fallback.
+  - Added public frontend forms integrated with the login flow.
+
 ## [0.7.0] — 2026-07-16 — Demo Mode & Verification
 
 ### Added

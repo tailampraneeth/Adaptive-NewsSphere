@@ -1,61 +1,64 @@
 :root {
   /* Typography */
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-display: 'Outfit', sans-serif;
+  --font-sans: 'Instrument Sans', system-ui, -apple-system, sans-serif;
+  --font-display: 'Inter', sans-serif;
+  --font-logo: 'Cinzel', serif;
 
-  /* Theme variables (Default: Light Mode - Soothing Warm Cream) */
-  --bg-primary: hsl(30, 20%, 98%);
-  --bg-secondary: hsl(30, 15%, 94%);
-  --bg-tertiary: hsl(30, 10%, 90%);
-  --card-bg: hsla(0, 0%, 100%, 0.7);
-  --card-border: hsla(145, 10%, 20%, 0.1);
-  --text-primary: hsl(210, 24%, 16%);
-  --text-secondary: hsl(210, 12%, 40%);
-  --text-muted: hsl(210, 8%, 56%);
+  /* Theme variables (Default: Dark Mode - Deep Space) */
+  --bg-primary: #0A0A14;
+  --bg-secondary: #12121F;
+  --bg-tertiary: #1A1A2E;
+  --card-bg: #12121F;
+  --card-border: #1E1E35;
+  --text-primary: #E8E8F0;
+  --text-secondary: #9C9CB0;
+  --text-muted: #6B6B8A;
 
-  /* Accent Colors (Sage Green) */
-  --primary: hsl(145, 25%, 45%);
-  --primary-hover: hsl(145, 30%, 38%);
-  --primary-light: hsl(145, 30%, 93%);
-  --accent: hsl(205, 30%, 50%); /* soft blue for highlights */
+  /* Accent Colors */
+  --primary: #4F8EF7;       /* Watchful Blue */
+  --primary-hover: #3A7DE3;
+  --primary-light: rgba(79, 142, 247, 0.1);
+  --accent: #C9A227;        /* Guardian Gold */
+  --accent-light: rgba(201, 162, 39, 0.1);
 
   /* Semantic Feedback */
-  --success: hsl(145, 45%, 40%);
-  --warning: hsl(38, 70%, 48%);
-  --error: hsl(0, 65%, 50%);
+  --success: #10B981;
+  --warning: #F59E0B;
+  --error: #EF4444;
 
   /* Focus & Borders */
-  --focus-ring: hsla(145, 25%, 45%, 0.4);
+  --focus-ring: rgba(79, 142, 247, 0.4);
   --radius-sm: 6px;
   --radius-md: 12px;
   --radius-lg: 20px;
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 8px 24px rgba(145, 25%, 45%, 0.06);
-  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.08);
+  
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.5);
 
-  --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  --sidebar-width: 260px;
+  --transition-smooth: all 0.2s ease;
+  --sidebar-width: 0px; /* replaced by BottomNav */
 }
 
-/* Dark Theme overrides (Soothing Slate Charcoal) */
-[data-theme="dark"] {
-  --bg-primary: hsl(210, 15%, 12%);
-  --bg-secondary: hsl(210, 12%, 16%);
-  --bg-tertiary: hsl(210, 10%, 20%);
-  --card-bg: hsla(210, 12%, 16%, 0.7);
-  --card-border: hsla(145, 10%, 80%, 0.1);
-  --text-primary: hsl(30, 20%, 95%);
-  --text-secondary: hsl(210, 10%, 75%);
-  --text-muted: hsl(210, 8%, 55%);
+/* Light Theme overrides (Soothing Slate Light) */
+[data-theme="light"] {
+  --bg-primary: #F4F5F8;
+  --bg-secondary: #FFFFFF;
+  --bg-tertiary: #E8EBF2;
+  --card-bg: #FFFFFF;
+  --card-border: #DDE2EB;
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-muted: #64748B;
 
-  --primary: hsl(145, 20%, 50%);
-  --primary-hover: hsl(145, 25%, 42%);
-  --primary-light: hsl(145, 20%, 18%);
-  --accent: hsl(205, 25%, 60%);
-
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
-  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.4);
+  --primary: #2563EB;
+  --primary-hover: #1D4ED8;
+  --primary-light: rgba(37, 99, 235, 0.1);
+  --accent: #B45309;
+  
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.12);
 }
 
 @media (prefers-reduced-motion: reduce) {

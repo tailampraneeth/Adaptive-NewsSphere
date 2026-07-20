@@ -11,15 +11,22 @@ export const AuthLayout = () => {
       </div>
       <div className="auth-glass-panel">
         <header className="auth-logo-header">
-          <div className="logo-badge">ANS</div>
-          <h1>NewsSphere</h1>
-          <p>AI-Powered News Intelligence Platform</p>
+          <img
+            src="/logo.jpg"
+            alt="Heimdall Logo"
+            className="heimdall-logo-img"
+            style={{ width: '80px', height: '80px', borderRadius: '50%', marginBottom: '16px', border: '2px solid var(--primary)' }}
+          />
+          <h1>Heimdall</h1>
+          <p style={{ color: 'var(--text-secondary)', fontWeight: '600', letterSpacing: '0.5px', textTransform: 'uppercase', fontSize: '11px' }}>
+            Personalized News App
+          </p>
         </header>
         <main className="auth-content">
           <Outlet />
         </main>
         <footer className="auth-footer">
-          <p>© 2026 Adaptive NewsSphere. Peaceful, verifiable news.</p>
+          <p>© 2026 Heimdall Watchtower. Peaceful, verifiable news.</p>
         </footer>
       </div>
     </div>

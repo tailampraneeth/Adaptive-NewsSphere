@@ -9,13 +9,20 @@ logger = logging.getLogger("adaptive-newssphere.database")
 DATABASE_URL = settings.get_database_url()
 logger.info(f"Connecting to database via async driver: {DATABASE_URL.split('@')[-1]}")
 
-engine = create_async_engine(
-    DATABASE_URL,
-    echo=False,  # Set True to output generated SQL statements
-    pool_size=10,
-    max_overflow=20,
-    pool_pre_ping=True
-)
+if "sqlite" in DATABASE_URL:
+    engine = create_async_engine(
+        DATABASE_URL,
+        echo=False,
+        pool_pre_ping=True
+    )
+else:
+    engine = create_async_engine(
+        DATABASE_URL,
+        echo=False,  # Set True to output generated SQL statements
+        pool_size=10,
+        max_overflow=20,
+        pool_pre_ping=True
+    )
 
 # Async session factory
 AsyncSessionLocal = async_sessionmaker(

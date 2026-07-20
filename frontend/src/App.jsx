@@ -19,17 +19,23 @@ import LoadingSkeleton from './components/LoadingSkeleton';
 // Pages (Lazy loaded for optimal code-splitting performance)
 const Login = lazy(() => import('./pages/Login'));
 const Signup = lazy(() => import('./pages/Signup'));
+const OnboardingPage = lazy(() => import('./pages/OnboardingPage'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
+const TrendingPage = lazy(() => import('./pages/TrendingPage'));
+const SearchPage = lazy(() => import('./pages/SearchPage'));
+const BookmarksPage = lazy(() => import('./pages/BookmarksPage'));
 const StoryPage = lazy(() => import('./pages/StoryPage'));
 const Settings = lazy(() => import('./pages/Settings'));
 const NotFound = lazy(() => import('./pages/NotFound'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 
 // Toast overlay panel
 import NotificationToast from './components/NotificationToast';
 
 // Route Guard for Protected Pages
 const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
+  const { user, isAuthenticated, loading } = useAuth();
 
   if (loading) {
     return <LoadingSkeleton type="page" />;
@@ -37,6 +43,30 @@ const ProtectedRoute = ({ children }) => {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Force onboarding completion
+  if (user && !user.onboarding_complete) {
+    return <Navigate to="/onboard" replace />;
+  }
+
+  return children;
+};
+
+// Route Guard for Onboarding (only accessible if logged in but onboarding is incomplete)
+const OnboardRoute = ({ children }) => {
+  const { user, isAuthenticated, loading } = useAuth();
+
+  if (loading) {
+    return <LoadingSkeleton type="page" />;
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (user && user.onboarding_complete) {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return children;
@@ -77,7 +107,24 @@ function App() {
                       <Signup />
                     </PublicRoute>
                   } />
+                  <Route path="/forgot-password" element={
+                    <PublicRoute>
+                      <ForgotPassword />
+                    </PublicRoute>
+                  } />
+                  <Route path="/reset-password" element={
+                    <PublicRoute>
+                      <ResetPassword />
+                    </PublicRoute>
+                  } />
                 </Route>
+
+                {/* Onboarding Flow Route */}
+                <Route path="/onboard" element={
+                  <OnboardRoute>
+                    <OnboardingPage />
+                  </OnboardRoute>
+                } />
 
                 {/* Private Authenticated Routes */}
                 <Route element={
@@ -87,6 +134,9 @@ function App() {
                 }>
                   <Route path="/" element={<Navigate to="/dashboard" replace />} />
                   <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/trending" element={<TrendingPage />} />
+                  <Route path="/search" element={<SearchPage />} />
+                  <Route path="/bookmarks" element={<BookmarksPage />} />
                   <Route path="/story/:id" element={<StoryPage />} />
                   <Route path="/settings" element={<Settings />} />
                 </Route>

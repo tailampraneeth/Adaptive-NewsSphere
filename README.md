@@ -1,23 +1,10 @@
-# Adaptive NewsSphere — AI-Powered News Intelligence Platform
+# Heimdall — World News Intelligence Watchtower
 
-Adaptive NewsSphere is a fully deterministic, AI-powered personalized news intelligence platform. The backend implements semantic clustering, story verification, and a recommendation engine — all without LLMs, paid APIs, or cloud services.
+> *See the World's Stories Before They Reach Everyone Else.*
 
-**Current Release:** `v0.7.0` — Production Demo & Frontend
+Heimdall is a lightweight, high-performance, PWA-compliant news intelligence platform. It ingests streams of articles from RSS feeds, groups them into coherent story clusters, runs deterministic verification checks, and delivers a ranked, personalized feed to users.
 
----
-
-
-## Milestone Progress
-
-| Milestone | Name | Status |
-|---|---|---|
-| 1 | Infrastructure & Ingestion | ✅ Released (v0.1.0) |
-| 2 | Semantic Intelligence | ✅ Released (v0.2.0) |
-| 3 | Story Intelligence & Verification | ✅ Released (v0.3.0) |
-| 4 | Recommendation Engine | ✅ Released (v0.4.0) |
-| 5 | Conversational AI (Q&A) | ✅ Released (v0.5.0) |
-| 6 | Frontend & Auth | ✅ Released (v0.6.0) |
-| **7** | **Demo Mode & Verification** | **✅ Released (v0.7.0)** |
+Heimdall is built specifically to run completely on **free-tier services** (Neon DB, Render backend, Vercel frontend, Gemini API), dropping heavyweight requirements like Redis or Qdrant vector databases in favor of optimized PostgreSQL indexing.
 
 ---
 
@@ -25,156 +12,76 @@ Adaptive NewsSphere is a fully deterministic, AI-powered personalized news intel
 
 | Layer | Technology |
 |---|---|
-| API Framework | FastAPI (async) |
-| Relational DB | PostgreSQL 16 (Docker, port **5433**) |
-| Vector DB | Qdrant (Docker, port **6333**) |
-| Cache | Redis (Docker, port **6379**) |
-| ORM | SQLAlchemy 2.0 (asyncpg) |
-| Migrations | Alembic |
-| Embeddings | sentence-transformers (`all-MiniLM-L6-v2`, 384-dim, CPU) |
-| NLP | spaCy + KeyBERT (deterministic, no LLMs) |
+| API Framework | FastAPI (Python 3.13) |
+| Relational DB | PostgreSQL 16 (Neon / Local port **5433**) with GIN indexes |
+| Dev/Test DB | SQLite `:memory:` (auto-fallback offline) |
+| Front-end | React 19 + Vite + Vanilla CSS |
+| PWA Compliance | Service Worker caching (last 20 stories offline) + Manifest |
+| AI Summary | Google Gemini API (free tier) with fallback |
+| NLP & Clustering | spaCy + Jaccard token overlap (CPU friendly) |
 
 ---
 
-## API Endpoints (v5.0.0)
+## Key Features
 
-| Method | Path | Description |
-|---|---|---|
-| `GET` | `/` | Welcome + version info |
-| `GET` | `/health` | Database connectivity check |
-| `GET` | `/docs` | Interactive Swagger UI |
-| `GET` | `/api/v1/metrics` | Pipeline performance statistics |
-| `POST` | `/api/v1/metrics/reset` | Reset metrics (dev only) |
-| `GET` | `/api/v1/feed/health` | Global recommendation engine health |
-| `GET` | `/api/v1/feed/{user_id}` | Personalized ranked news feed |
-| `POST` | `/api/v1/feed/interact` | Record user interaction |
-| `GET` | `/api/v1/feed/{user_id}/profile/health` | User profile diagnostics |
-| `POST` | `/api/v1/chat/sessions` | Create conversational RAG session |
-| `GET` | `/api/v1/chat/sessions/{session_id}` | Get session details & history |
-| `POST` | `/api/v1/chat/sessions/{session_id}/message` | Send message (streaming/sync) |
-| `GET` | `/api/v1/chat/sessions/user/{user_id}/list` | List user sessions |
-| `DELETE` | `/api/v1/chat/sessions/{session_id}` | Delete conversational session |
-| `GET` | `/api/v1/chat/health` | Chat RAG pipeline diagnostics |
-
----
-
-## Port Conflict Design (Why Port 5433?)
-
-PostgreSQL maps to host port **5433** (`5433:5432`) to prevent conflicts with any native PostgreSQL service on port 5432. To revert to 5432, update `docker-compose.yml` and `.env`.
+1. **Deterministic Clustering:** Jaccard title token overlap ($\ge 0.40$) and keyword overlap within 12-hour windows groups articles without expensive vectors.
+2. **Consensus Verification:** Computes contradiction matrices, publisher diversity, and source agreement levels using Jaccard token matches.
+3. **PostgreSQL FTS Search:** Direct full-text search utilizing `ts_rank` over a `search_vector` column synchronized via triggers, with fallback to SQLite `LIKE` in development.
+4. **Scored SQL Recommendation:** Sorts stories dynamically using interests match, publisher affinities, and region boosts.
+5. **Reading Completion Feedback:** Automatically monitors scroll depth and dwell time. Reaching $\ge 70\%$ depth boosts the category score ($+0.10$), while leaving $\le 20\%$ applies an abandonment penalty ($-0.10$).
+6. **Norse-Themed UI:** Sleek, modern dark-space default layout (dark/light toggles) matching premium design aesthetics.
+7. **Daily Briefing:** Displays a customized top 5 briefings banner corresponding to morning/afternoon/evening preference slots.
+8. **Secure Password Recovery:** Integrated forgot-password and reset-password flows with cryptographic token hashing, rate-limiting, anti-user enumeration, and SMTP dispatch with fallback console logging.
 
 ---
 
 ## Local Development Setup
 
-### 1. Prerequisites
-- Windows 11 with **WSL2** enabled
-- **Python 3.13** installed on host
-- **Docker Desktop** installed and running
+### 1. Backend Setup
+1. Copy environmental template:
+   ```bash
+   cp .env.example .env
+   ```
+2. Create and activate a Python virtual environment:
+   ```bash
+   python -m venv .venv
+   .venv\Scripts\activate
+   ```
+3. Install backend dependencies:
+   ```bash
+   cd backend
+   pip install -r requirements.txt
+   ```
+4. Run Alembic schema migrations:
+   ```bash
+   alembic upgrade head
+   ```
+5. Seed publishers and test accounts:
+   ```bash
+   python scripts/seed_publishers.py
+   python scripts/seed_users.py
+   ```
+6. Launch API server:
+   ```bash
+   uvicorn app.main:app --reload
+   ```
 
-### 2. Configure Environment
-```bash
-cp .env.example .env
-```
+### 2. Frontend Setup
+1. Go to the frontend directory:
+   ```bash
+   cd frontend
+   npm install
+   ```
+2. Launch Vite dev server:
+   ```bash
+   npm run dev
+   ```
+3. Open the web interface at `http://localhost:5173`.
 
-### 3. Start Infrastructure
-```powershell
-.\backend\scripts\start-dev.ps1
-```
-Or manually:
-```bash
-docker compose up -d
-cd backend && alembic upgrade head
-```
-
-### 4. Run Tests
-```powershell
-$env:PYTHONPATH="backend"
-.\.venv\Scripts\pytest backend/tests/ -v
-```
-Expected: **81 tests passed**
-
-### 5. Launch API Server
+### 3. Run Verification Tests
+To execute the automated backend validation suite:
 ```bash
 cd backend
-uvicorn app.main:app --reload
+python -m pytest tests/
 ```
-- API Docs: http://localhost:8000/docs
-- Health: http://localhost:8000/health
-- Feed: http://localhost:8000/api/v1/feed/{user_id}
-
-### 6. Launch Frontend Client
-Ensure Node.js 18+ is installed on the host:
-```bash
-cd frontend
-npm install
-npm run dev
-```
-The application will open at http://localhost:3000.
-
-### 7. Automatic Demo Mode & Seeding
-If you run with `DEMO_MODE=True` in `.env`, the FastAPI application will automatically check if the database is unseeded on startup. If unseeded, it will:
-1. Re-initialize database schemas
-2. Purge Qdrant vector collections
-3. Seed 300 stories and 2 demo users
-   - **Cold User:** `cold@test.com` (Password: `password123`)
-   - **Warm User:** `warm@test.com` (Password: `password123`)
-
-### 8. Run Analytics Report
-```bash
-$env:PYTHONPATH="backend"
-python backend/scripts/generate_analytics.py
-```
-
-### 9. Stop Infrastructure
-```powershell
-.\backend\scripts\stop-dev.ps1
-```
-
----
-
-## Codebase Directory Layout
-
-```text
-backend/
-├── app/
-│   ├── api/routes/         # Routing: metrics.py, feed.py, auth.py, chat.py
-│   ├── core/               # config.py (all settings & feature flags), logging.py
-│   ├── database/
-│   │   ├── connection.py   # Async session manager
-│   │   ├── migrations/     # Alembic schema versions
-│   │   └── models/         # Domain models: user, user_profile, article, story,
-│   │                       #   recommendation, interaction, conversation, ...
-│   ├── services/           # Business logic: clustering, nlp_processor,
-│   │                       #   preference_engine, feed_assembler, vector_store
-│   ├── utils/              # Text cleaners, hash helpers
-│   └── workers/            # rss_worker, preference_worker
-├── scripts/
-│   ├── generate_analytics.py  # 13-section analytics report
-│   ├── seed_users.py          # Dev utility: seed test users
-│   └── ...
-└── tests/                  # pytest suites
-
-frontend/                   # React 19 + Vite web interface
-├── src/
-│   ├── components/         # Calming theme UI elements
-│   ├── context/            # AuthContext, ThemeContext, NotificationContext
-│   └── services/           # Base Request API wrappers
-
-docs/
-├── recommendation-engine.md   # Recommendation engine design docs
-├── conversational-rag.md      # Conversational RAG pipeline reference
-├── conversation-engine.md     # RAG Refined telemetry architecture design
-├── frontend.md                # Frontend operations manual
-└── ui-architecture.md         # UI system architecture reference
-```
-
----
-
-## Engineering Philosophy
-
-- 🚫 **No LLMs** — all intelligence is deterministic (EMA, cosine similarity, exponential decay)
-- 🆓 **Completely free** — no paid APIs, no cloud services
-- 🏠 **Local-first** — Redis + Qdrant + PostgreSQL in Docker
-- 🤖 **CPU-friendly** — all inference uses lightweight sentence-transformers
-- ⚙️ **Configurable** — all ranking weights and feature flags in `config.py`
-- 🧩 **Modular Monolith** — Clean Architecture, independently testable services
+All tests are configured to automatically fall back to an in-memory SQLite database when PostgreSQL is offline, ensuring zero external environment requirements.

@@ -29,7 +29,6 @@ export const AuthProvider = ({ children }) => {
 
     initAuth();
 
-    // Listen for global 401 unauthorized notifications
     const handleUnauthorized = () => {
       setUser(null);
       setToken(null);
@@ -42,10 +41,11 @@ export const AuthProvider = ({ children }) => {
   const login = useCallback(async (email, password) => {
     setLoading(true);
     try {
-      const result = await authService.login(email, password);
-      setUser(result.user);
-      setToken(result.token);
-      return result.user;
+      const loggedUser = await authService.login(email, password);
+      const storedToken = authService.getToken();
+      setUser(loggedUser);
+      setToken(storedToken);
+      return loggedUser;
     } finally {
       setLoading(false);
     }
@@ -68,7 +68,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, signup, logout, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ user, setUser, token, loading, login, signup, logout, isAuthenticated: !!user }}>
       {children}
     </AuthContext.Provider>
   );

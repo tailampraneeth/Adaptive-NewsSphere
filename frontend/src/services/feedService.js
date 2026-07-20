@@ -1,38 +1,26 @@
 import { request } from './api';
 
 export const feedService = {
-  async getPersonalizedFeed(userId) {
-    const data = await request(`/api/v1/feed/${userId}`, {
-      method: 'GET',
-    });
-    return data;
+  async getPersonalizedFeed(cursor = '', limit = 20) {
+    const path = `/api/v1/feed?limit=${limit}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`;
+    return await request(path, { method: 'GET' });
   },
 
-  async recordInteraction(userId, storyId, interactionType, dwellSeconds = null) {
-    const data = await request('/api/v1/feed/interact', {
+  async getTrendingFeed(cursor = '', limit = 20) {
+    const path = `/api/v1/feed/trending?limit=${limit}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`;
+    return await request(path, { method: 'GET' });
+  },
+
+  async recordInteraction(storyId, interactionType, readPct = 0, dwellSeconds = 0) {
+    return await request('/api/v1/feed/interact', {
       method: 'POST',
       body: {
-        user_id: userId,
         story_id: storyId,
         interaction_type: interactionType,
+        read_pct: readPct,
         dwell_seconds: dwellSeconds,
       },
     });
-    return data;
-  },
-
-  async getProfileHealth(userId) {
-    const data = await request(`/api/v1/feed/${userId}/profile/health`, {
-      method: 'GET',
-    });
-    return data;
-  },
-
-  async getRecommendationStats() {
-    const data = await request('/api/v1/feed/health', {
-      method: 'GET',
-    });
-    return data;
   }
 };
 export default feedService;
